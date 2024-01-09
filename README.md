@@ -1,8 +1,8 @@
-# Convert deltavision files to png automatically
-Author: Naly Torres
+# Automated smFISH quantification for C. elegans embryos
+Author: Naly Torres, Luis de Lira Aguilera, PhD
 
 # Description
-Repository to automatically download and visualize deltavision files stored in the Network-attached storage (NAS). This repository uses PySMB to access and transfer data between NAS and a local (your computer) or a remote server (Alpine-HPC). Microscope images are then organized in subdirectories ready for creating a report (use deconvolved version) or image analysis (use non-deconvolved version).
+Repository to automatically perform spot detection of smFISH in C. elegans embryos. This repository requires high performance computing on a remote server (Alpine-HPC). Non-deconvolved microscope images are loaded in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Pandas in Python is used to automatically collect all the data as a dataframe and csv files. -- in R is used for statistical analysis and Flexdashboard for building an interactive experiment report that includes snapshot of the image, segmentation masks (sytoplasmic and nuclei), plot of automated threshold selection per image, per channel. 
 
 # Code Architecture
 
@@ -17,11 +17,14 @@ flowchart TD
 ```
 
 # Code overview
-## Connect to Network-attached storage NAS
-Uses PySMB
-## Access and read deltavision files
+## Transfer data from local to remote environment
+
+## Cell segmentaion (Cellpose)
 Uses FISHquant
-## Save files as png in subdirectories
+## Spot detection (BigFish)
+
+
+Save files as png in subdirectories
 Uses Python
 
 # Installation
