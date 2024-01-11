@@ -21,11 +21,12 @@ flowchart TD
 
 ## Cell segmentaion (Cellpose)
 Uses FISHquant
+
 ## Spot detection (BigFish)
-
-
 Save files as png in subdirectories
 Uses Python
+
+## Data analysis and visualization
 
 # Installation
 > [!TIP]
@@ -44,7 +45,7 @@ conda activate dv2png_env
 ```
 git clone --depth 1 https://github.com/TorresNaly/dv2png.git
 ```
-#### Last edited Jan 7th, 2024. 
+#### Last edited Jan 11th, 2024. 
 
 
 
