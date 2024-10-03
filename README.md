@@ -34,7 +34,7 @@ conda activate ce-bigfish
 ```
 git clone --depth 1 https://github.com/TorresNaly/ce-bigfish.git
 ```
-#### Last edited Jan 11th, 2024. 
+#### Last edited Oct 1st, 2024. 
 
 
 
