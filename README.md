@@ -2,7 +2,7 @@
 
 Authors: Naly Torres, Luis de Lira Aguilera, PhD
 
-This repo is currently being edited: If you are interested or have questions please email: naly.torres@colostate.edu
+(October 6th, 2024) This repo is currently being edited: If you are interested or have questions please email: naly.torres@colostate.edu 
 
 # Description
 Repository to automatically perform spot detection of smFISH in C. elegans embryos. This repository requires high performance computing on a remote server (Alpine-HPC). Non-deconvolved microscope images are loaded in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Pandas in Python is used to automatically collect all the data as a dataframe and csv files. -- in R is used for statistical analysis and Flexdashboard for building an interactive experiment report that includes snapshot of the image, segmentation masks (sytoplasmic and nuclei), plot of automated threshold selection per image, per channel. 
