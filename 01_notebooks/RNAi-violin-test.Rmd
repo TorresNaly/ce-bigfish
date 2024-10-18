@@ -1,0 +1,635 @@
+---
+title: "smFISH quantification report `r format(Sys.Date(), '%Y-%m-%d')`"
+author: "Naly Torres"
+date: "1/30/2024"
+output: html_document
+---
+
+
+```{r echo=FALSE, warning=FALSE} 
+
+library(png)
+library(knitr)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+#install.packages("ggplot2")
+library(ggsignif)
+#install.packages("scales")
+library(svglite)
+library(ggridges)
+library(scales)
+
+
+```
+
+
+Violin Plots
+
+```{r}
+
+# Parent directory containing CSV files for all conditions
+parent_directory <- "/Users/nalytorres/Library/CloudStorage/OneDrive-Colostate/01_bigfish/02_RNAi-treatments-csv"
+
+
+# Function to read CSV, replace Image ID with CSV name, and modify column names
+read_modify_csv <- function(file_path, subdirectory) {
+  my_df <- read.csv(file_path)
+  my_df$Image_ID <- basename(file_path)
+  my_df$subdirectory <- subdirectory
+  my_df <- my_df[, colnames(my_df) != "X"]
+  current_colnames <- colnames(my_df)
+  new_colnames <- gsub("\\.", " ", current_colnames)
+  colnames(my_df) <- new_colnames
+  return(my_df)
+}
+
+# List all subdirectories (conditions) in the parent directory
+subdirectories <- list.dirs(parent_directory, full.names = FALSE, recursive = FALSE)
+
+# Initialize an empty list to store data frames
+all_data <- list()
+
+# Loop through subdirectories (conditions)
+for (subdirectory in subdirectories) {
+  # List all CSV files in the current subdirectory
+  csv_files <- list.files(path = file.path(parent_directory, subdirectory), pattern = "*.csv", full.names = TRUE)
+  
+  # Loop through CSV files, read data, replace Image ID, and modify column names
+  for (file_path in csv_files) {
+    current_data <- read_modify_csv(file_path, subdirectory)
+    all_data[[file_path]] <- current_data
+  }
+}
+
+# Combine all data frames into one data frame
+combined_data <- bind_rows(all_data)
+
+combined_data
+```
+
+
+
+```{r}
+#Horizontal
+
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi", "DHC-1_RNAi")  # 
+
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "KLP-9_RNAi" = "lightgreen", "BMK-1_RNAi" = "lightgreen", "KLP-18_RNAi" = "lightgreen", "KLP-19_RNAi" = "lightgreen","UNC-116_RNAi" = "lightgreen", "NMY-1_RNAi" = "skyblue", "NMY-2_RNAi" = "skyblue", "DHC-1_RNAi" = "orange")
+
+# Create a combined violin and boxplot
+p <- ggplot(combined_data, aes(x = subdirectory, y = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_boxplot(width = 0.25, position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_violin(alpha = 0.4, color = "white", size = 0.5, position = position_dodge(width = 0.75)) +
+  geom_jitter(height = 0, width = 0.2, color = "black", size = 1) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "RNAi treatments",
+       y = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"),
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_x_discrete(labels = c("L4440_RNAi" = "Control",
+                              "BMK-1_RNAi" = "KLP-14 ",
+                              "KLP-18_RNAi" = "KLP-18",
+                              "KLP-19_RNAi" = "KLP-19",
+                              "KLP-9_RNAi" = "KLP-9  ",
+                              "NMY-1_RNAi" = "NMY-1",
+                              "UNC-116_RNAi" = "UNC-116",
+                              "NMY-2_RNAi" = "NMY-2",
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 13, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_cartesian(ylim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 2))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+# Save the plot as SVG with specified output path
+#ggsave("/Users/nalytorres/Documents/01_bigfish/RNAi-treatments-violin/RNAi-treatments-horizontal-plot.svg", p, width = 10, height = 6)
+
+
+
+```
+
+```{r}
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi", "DHC-1_RNAi")
+
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "KLP-9_RNAi" = "lightgreen", "BMK-1_RNAi" = "lightgreen", "KLP-18_RNAi" = "lightgreen", "KLP-19_RNAi" = "lightgreen",
+                 "UNC-116_RNAi" = "lightgreen", "NMY-1_RNAi" = "skyblue", "NMY-2_RNAi" = "skyblue", "DHC-1_RNAi" = "orange")
+
+# Create a horizontal bar plot
+p <- ggplot(combined_data, aes(y = subdirectory, x = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.75)) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knockdown",
+       y = "RNAi treatments", 
+       x = "erm-1 mRNA abundance \n (total molecules per embryo)", 
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors, 
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"), 
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_y_discrete(labels = c("L4440_RNAi" = "Control", 
+                              "BMK-1_RNAi" = "KLP-14", 
+                              "KLP-18_RNAi" = "KLP-18", 
+                              "KLP-19_RNAi" = "KLP-19", 
+                              "KLP-9_RNAi" = "KLP-9", 
+                              "NMY-1_RNAi" = "NMY-1", 
+                              "UNC-116_RNAi" = "UNC-116", 
+                              "NMY-2_RNAi" = "NMY-2", 
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.y = element_text(size = 12), 
+        axis.text.x = element_text(size = 12), 
+        legend.position = "right", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(), 
+        axis.line = element_line(color = "black"), 
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"), 
+        axis.title = element_text(size = 13, face = "bold"), 
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 12)) +
+  coord_flip()  # Flip the axes
+
+# Display the plot
+print(p)
+
+```
+
+
+```{r}
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi", "DHC-1_RNAi")
+
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "KLP-9_RNAi" = "purple", "BMK-1_RNAi" = "purple", "KLP-18_RNAi" = "purple", "KLP-19_RNAi" = "purple",
+                 "UNC-116_RNAi" = "purple", "NMY-1_RNAi" = "skyblue", "NMY-2_RNAi" = "skyblue", "DHC-1_RNAi" = "orange")
+
+# Create a boxplot with individual points
+p <- ggplot(combined_data, aes(y = subdirectory, x = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +  # Create boxplots without showing outliers
+  geom_jitter(position = position_jitter(height = 0.2, width = 0), size = 2, alpha = 0.8, color = "black") +  # Add individual data points with jitter for clarity
+  labs(title = "erm-1 mRNA abundance in embryos after motor knockdown",
+       y = "RNAi treatments", 
+       x = "erm-1 mRNA abundance \n (molecules per embryo)", 
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors, 
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"), 
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_y_discrete(labels = c("L4440_RNAi" = "Control", 
+                              "BMK-1_RNAi" = "KLP-14", 
+                              "KLP-18_RNAi" = "KLP-18", 
+                              "KLP-19_RNAi" = "KLP-19", 
+                              "KLP-9_RNAi" = "KLP-9", 
+                              "NMY-1_RNAi" = "NMY-1", 
+                              "UNC-116_RNAi" = "UNC-116", 
+                              "NMY-2_RNAi" = "NMY-2", 
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.y = element_text(size = 12), 
+        axis.text.x = element_text(size = 12), 
+        legend.position = "right", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(), 
+        axis.line = element_line(color = "black"), 
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"), 
+        axis.title = element_text(size = 13, face = "bold"), 
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 12)) +
+  coord_flip()  # Flip the axes
+
+# Display the plot
+print(p)
+
+```
+
+
+```{r}
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi", "DHC-1_RNAi")
+#custom_order <- rev(custom_order)
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "KLP-9_RNAi" = "lightgreen", "BMK-1_RNAi" = "lightgreen", "KLP-18_RNAi" = "lightgreen", "KLP-19_RNAi" = "lightgreen",
+                 "UNC-116_RNAi" = "lightgreen", "NMY-1_RNAi" = "skyblue", "NMY-2_RNAi" = "skyblue", "DHC-1_RNAi" = "orange")
+
+# Create a boxplot with individual points
+p <- ggplot(combined_data, aes(x =subdirectory, y = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +  # Create boxplots without showing outliers
+  geom_jitter(position = position_jitter(width = 0.2, height = 0), size = 2, alpha = 0.8, color = "black") +  # Add individual data points with jitter for clarity
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knockdown",
+       x = "Total erm-1 mRNA abundance \n (molecules per embryo)", 
+       y = "RNAi treatments", 
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors, 
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"), 
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_x_discrete(labels = c("L4440_RNAi" = "Control", 
+                              "BMK-1_RNAi" = "KLP-14", 
+                              "KLP-18_RNAi" = "KLP-18", 
+                              "KLP-19_RNAi" = "KLP-19", 
+                              "KLP-9_RNAi" = "KLP-9", 
+                              "NMY-1_RNAi" = "NMY-1", 
+                              "UNC-116_RNAi" = "UNC-116", 
+                              "NMY-2_RNAi" = "NMY-2", 
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Tilt x-axis labels for readability
+        axis.text.y = element_text(size = 12), 
+        legend.position = "right", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(), 
+        axis.line = element_line(color = "black"), 
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"), 
+        axis.title = element_text(size = 13, face = "bold"), 
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 12))
+
+# Display the plot
+print(p)
+
+```
+
+
+
+
+```{r}
+#Horizontal - kinesin phenotypes
+
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi")  
+
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "KLP-9_RNAi" = "lightgreen", "BMK-1_RNAi" = "lightgreen")
+
+# Create a combined violin and boxplot
+p <- ggplot(combined_data, aes(x = subdirectory, y = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_violin(alpha = 0.4, color = "white", size = 0.5, position = position_dodge(width = 0.75)) +
+  geom_boxplot(width = 0.1, position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_jitter(height = 0, width = 0.2, color = "black", size = 1) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "RNAi treatments",
+       y = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi"),
+                    labels = c("Control", "Kinesin")) +
+  scale_x_discrete(labels = c("L4440_RNAi" = "Control",
+                              "BMK-1_RNAi" = "BMK-1",
+                              "KLP-9_RNAi" = "KLP-9")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 13, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_cartesian(ylim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 2))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+
+# Save the plot as SVG with specified output path
+#ggsave("/Users/nalytorres/Documents/01_bigfish/RNAi-treatments-violin/RNAi-treatments-horizontal-kinesin-phenotypes-plot.svg", p, width = 10, height = 6)
+
+
+
+```
+
+
+```{r}
+#Horizontal - myosin phenotypes
+
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "NMY-1_RNAi", "NMY-2_RNAi")  
+
+# Convert subdirectory to a factor with custom order
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = custom_order)
+
+# Specify color for all levels
+fill_colors <- c("L4440_RNAi" = "hotpink", "NMY-1_RNAi" = "lightblue", "NMY-2_RNAi" = "lightblue")
+
+# Create a combined violin and boxplot
+p <- ggplot(combined_data, aes(x = subdirectory, y = `erm 1 mRNA molecules`, fill = subdirectory)) +
+  geom_violin(alpha = 0.4, color = "white", size = 0.5, position = position_dodge(width = 0.75)) +
+  geom_boxplot(width = 0.1, position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_jitter(height = 0, width = 0.2, color = "black", size = 1) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "RNAi treatments",
+       y = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "NMY-2_RNAi"),
+                    labels = c("Control", "Myosin")) +
+  scale_x_discrete(labels = c("L4440_RNAi" = "Control",
+                              "NMY-2_RNAi" = "NMY-2",
+                              "NMY-1_RNAi" = "NMY-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 13, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_cartesian(ylim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 2))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+
+# Save the plot as SVG with specified output path
+ggsave("/Users/nalytorres/Documents/01_bigfish/RNAi-treatments-violin/RNAi-treatments-horizontal-myosin-phenotypes1-plot.svg", p, width = 10, height = 6)
+
+
+```
+
+
+
+```{r}
+# Vertical
+
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi")  # 
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = rev(custom_order))
+
+# Create a combined violin and boxplot
+p <- ggplot(combined_data, aes(x = `erm 1 mRNA molecules`, y = subdirectory, fill = subdirectory)) +
+  geom_boxplot(width = 0.25, position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_violin(alpha = 0.4, color = "white", size = 0.5, position = position_dodge(width = 0.75)) +
+  geom_jitter(height = 0, width = 0.2, color = "black", size = 1) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       y = "RNAi treatments",
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"),
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_y_discrete(labels = c("L4440_RNAi" = "Control",
+                              "BMK-1_RNAi" = "KLP-14 ",
+                              "KLP-18_RNAi" = "KLP-18",
+                              "KLP-19_RNAi" = "KLP-19",
+                              "KLP-9_RNAi" = "KLP-9  ",
+                              "NMY-1_RNAi" = "NMY-1",
+                              "UNC-116_RNAi" = "UNC-116",
+                              "NMY-2_RNAi" = "NMY-2",
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.y = element_text(angle = 0, hjust = 1),
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 13, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_cartesian(xlim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 3))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+# Save the plot as SVG with specified output path
+ggsave("//Users/nalytorres/Library/CloudStorage/OneDrive-Colostate/01_bigfish/02_RNAi-treatments-csv/RNAi-treatments-plot.svg", p, width = 10, height = 6)
+
+
+
+
+```
+```{r}
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi")
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = rev(custom_order))
+
+# Create a combined violin and boxplot
+p <- ggplot(combined_data, aes(x = `erm 1 mRNA molecules`, y = subdirectory, fill = subdirectory)) +
+  geom_boxplot(width = 0.25, position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_violin(alpha = 0.4, color = "white", size = 0.5, position = position_dodge(width = 0.75)) +
+  geom_jitter(height = 0, width = 0.2, color = "black", size = 1) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       y = NULL,  # Removed y-axis label
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"),
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_y_discrete(labels = c("L4440_RNAi" = "Control",
+                              "BMK-1_RNAi" = "KLP-14 ",
+                              "KLP-18_RNAi" = "KLP-18",
+                              "KLP-19_RNAi" = "KLP-19",
+                              "KLP-9_RNAi" = "KLP-9  ",
+                              "NMY-1_RNAi" = "NMY-1",
+                              "UNC-116_RNAi" = "UNC-116",
+                              "NMY-2_RNAi" = "NMY-2",
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.y = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 13, face = "bold", margin = margin(r = 20)),  # Adjusted y-axis label position
+        axis.title.x = element_text(size = 13, face = "bold"),  # Added x-axis label formatting
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_flip() +  # Flip the plot vertically
+  coord_cartesian(xlim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 3))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+# Save the plot as SVG with specified output path
+ggsave("//Users/nalytorres/Library/CloudStorage/OneDrive-Colostate/01_bigfish/02_RNAi-treatments-csv/RNAi-treatments-plot.svg", p, width = 10, height = 6)
+
+```
+
+
+
+
+```{r}
+# Load necessary libraries
+
+
+# Define the custom order for subdirectories
+custom_order <- c("L4440_RNAi", "KLP-9_RNAi", "BMK-1_RNAi", "KLP-18_RNAi", "KLP-19_RNAi", "UNC-116_RNAi", "NMY-1_RNAi", "NMY-2_RNAi")  # 
+combined_data$subdirectory <- factor(combined_data$subdirectory, levels = rev(custom_order))
+
+# Create the ridgeline plot
+p <- ggplot(combined_data, aes(x = `erm 1 mRNA molecules`, y = subdirectory, fill = subdirectory)) +
+  geom_density_ridges(scale = 0.9, rel_min_height = 0.01, alpha = 0.7) +
+  labs(title = "Total erm-1 mRNA abundance in embryos after motor knock down",
+       x = "erm-1 mRNA abundance \n (total molecules per embryo)",
+       y = "RNAi treatments",
+       fill = "Motor Class") +  # Set the legend title here
+  scale_fill_manual(values = fill_colors,
+                    breaks = c("L4440_RNAi", "KLP-9_RNAi", "NMY-2_RNAi", "DHC-1_RNAi"),
+                    labels = c("Control", "Kinesin", "Myosin", "Dynein")) +
+  scale_y_discrete(labels = c("L4440_RNAi" = "Control",
+                              "BMK-1_RNAi" = "KLP-14 ",
+                              "KLP-18_RNAi" = "KLP-18",
+                              "KLP-19_RNAi" = "KLP-19",
+                              "KLP-9_RNAi" = "KLP-9  ",
+                              "NMY-1_RNAi" = "NMY-1",
+                              "UNC-116_RNAi" = "UNC-116",
+                              "NMY-2_RNAi" = "NMY-2",
+                              "DHC-1_RNAi" = "DHC-1")) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.y = element_text(angle = 45, hjust = 1),
+        legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 13, face = "bold"),
+        axis.text = element_text(size = 12),
+        axis.ticks = element_blank(),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)) +
+  coord_cartesian(xlim = c(0, 7500)) +
+  guides(fill = guide_legend(nrow = 3))  # Limit the legend to two rows
+
+# Display the plot
+print(p)
+
+```
+
+
+
+```{r}
+# Shapiro-Wilk test for normality
+shapiro.test(combined_data$`erm 1 mRNA molecules`)
+```
+The Shapiro-Wilk normality test is used to assess whether a given dataset is normally distributed. Here’s a brief interpretation of your test results:
+
+W statistic (0.78378): This is the test statistic for the Shapiro-Wilk test. It ranges from 0 to 1, with values closer to 1 indicating that the data is more likely to be normally distributed.
+p-value (< 2.2e-16): This is the probability of observing the test results under the null hypothesis that the data is normally distributed. A very small p-value (typically less than 0.05) suggests that the data is not normally distributed.
+In your case, the W statistic is 0.78378, and the p-value is less than 2.2e-16, which is extremely small. This indicates that there is strong evidence against the null hypothesis, suggesting that the erm 1 mRNA molecules data is not normally distributed.
+
+Would you like more information on how to proceed given these results?
+
+
+
+
+```{r}
+
+# Kruskal-Wallis test
+kruskal.test(`erm 1 mRNA molecules` ~ subdirectory, data = combined_data)
+
+
+```
+
+The Kruskal-Wallis rank sum test is a non-parametric method used to determine if there are statistically significant differences between the medians of three or more independent groups. Here’s how to interpret the results you provided:
+
+Interpretation
+Kruskal-Wallis chi-squared (39.678): This is the test statistic for the Kruskal-Wallis test. Higher values indicate a greater difference between groups.
+Degrees of freedom (df = 7): This is the number of groups minus one. In your case, it suggests that there are 8 groups (7 + 1).
+p-value (1.451e-06): This is the probability of observing the test results under the null hypothesis that all group medians are equal. A very small p-value (typically less than 0.05) indicates that at least one group median is significantly different from the others.
+Since your p-value is 1.451e-06, which is much smaller than 0.05, you can reject the null hypothesis. This means there is strong evidence that at least one of the groups has a different median erm 1 mRNA molecules level compared to the others.
+
+
+```{r}
+# Perform the Dunn test
+dunn.test(combined_data$`erm 1 mRNA molecules`, combined_data$subdirectory, method = "bonferroni")
+```
+
+
+
+```{r}
+# Boxplot
+boxplot(`erm 1 mRNA molecules` ~ subdirectory, data = combined_data, main = "erm 1 mRNA molecules by Subdirectory", xlab = "Subdirectory", ylab = "erm 1 mRNA molecules")
+
+```
+
+
+
+
+```{r}
+# Perform ANOVA -> can't do this because the data is not normally distributed
+anova_result <- aov(`erm 1 mRNA molecules` ~ subdirectory, data = combined_data)
+
+# Display ANOVA summary
+summary(anova_result)
+
+# Perform Tukey's post hoc test
+tukey_result <- TukeyHSD(anova_result)
+
+# Sort Tukey's test results alphabetically by comparisons
+sorted_tukey_result <- tukey_result$subdirectory[order(row.names(tukey_result$subdirectory)), ]
+
+# Display sorted Tukey's post hoc test results
+# Format p-values to avoid scientific notation
+sorted_tukey_result <- data.frame(sorted_tukey_result)
+sorted_tukey_result$p.adj <- format(sorted_tukey_result$p.adj, scientific = FALSE)
+
+sorted_tukey_result
+
+
+```
+
+
+
+
+
