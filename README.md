@@ -1,25 +1,15 @@
 # Automated smFISH quantification for C. elegans embryos
 
-Author: Naly Torres, Luis de Lira Aguilera, PhD
+Authors: Naly Torres, Luis de Lira Aguilera, PhD
+
+(October 6th, 2024) This repo is currently being edited: If you are interested or have questions please email: naly.torres@colostate.edu 
 
 # Description
 Repository to automatically perform spot detection of smFISH in C. elegans embryos. This repository requires high performance computing on a remote server (Alpine-HPC). Non-deconvolved microscope images are loaded in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Pandas in Python is used to automatically collect all the data as a dataframe and csv files. -- in R is used for statistical analysis and Flexdashboard for building an interactive experiment report that includes snapshot of the image, segmentation masks (sytoplasmic and nuclei), plot of automated threshold selection per image, per channel. 
 
-# Code Architecture
 
-
-```mermaid
-flowchart TD
-    Experiments[smFISH images \n ** deltavision files **] --> B[Connect to Network-attached storage NAS \n ** PySMB **]
-    B -->|Input:\n DV files deconvolved or non-deconvolved \n  and reference image | C[Split channels and max project]
-    C --> D[save all in a  subdirectory, \n repeat for all images in experiment folder]
-    D --> B
-    B ---->|Output:\n png images for each channel, \n for each image| E[Build report or image processing]
-```
 
 # Code overview
-## Transfer data from local to remote environment
-
 ## Cell segmentaion (Cellpose)
 Uses FISHquant
 
@@ -35,18 +25,18 @@ Uses Python
 
 * Create conda environment
 ```
-# conda create --name dv2png_env
-conda create --name dv2png_env --file dv2png_env.yml
+# conda create --name ce-bigfish
+conda create --name ce-bigfish --file ce-bigfish.yml
 ```
 * Activate conda environment
 ```
-conda activate dv2png_env
+conda activate ce-bigfish
 ```
 * Clone git repository
 ```
-git clone --depth 1 https://github.com/TorresNaly/dv2png.git
+git clone --depth 1 https://github.com/TorresNaly/ce-bigfish.git
 ```
-#### Last edited Jan 11th, 2024. 
+#### Last edited Oct 1st, 2024. 
 
 
 
