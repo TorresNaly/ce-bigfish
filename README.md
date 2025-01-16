@@ -1,6 +1,7 @@
 # Automated smFISH quantification for C. elegans embryos
 
 Author: Naly Torres
+
 Collaborators: Luis de Lira Aguilera PhD, Karissa Coleman BS
 
 (October 6th, 2024) This repo is currently being edited: If you are interested or have questions please email: naly.torres@colostate.edu 
