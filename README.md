@@ -1,19 +1,19 @@
 # Automated smFISH quantification for C. elegans embryos
 
-Authors: Naly Torres, Luis de Lira Aguilera, PhD
+Author: Naly Torres
+Collaborators: Luis de Lira Aguilera PhD, Karissa Coleman BS
 
 (October 6th, 2024) This repo is currently being edited: If you are interested or have questions please email: naly.torres@colostate.edu 
 
 # Description
-Repository to automatically perform spot detection of smFISH in C. elegans embryos. This repository requires high performance computing on a remote server (Alpine-HPC). Non-deconvolved microscope images are loaded in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Pandas in Python is used to automatically collect all the data as a dataframe and csv files. -- in R is used for statistical analysis and Flexdashboard for building an interactive experiment report that includes snapshot of the image, segmentation masks (sytoplasmic and nuclei), plot of automated threshold selection per image, per channel. 
-
+Software to analyze smFISH images of C. elegans embryos in python. Requires non-deconvolved microscope images in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Output is a csv file with mRNA counts per embryo and a report with images of the spot detection and segmentaion masks.
 
 
 # Code overview
-## Cell segmentaion (Cellpose)
-Uses FISHquant
+## Cell segmentaion
+Uses Cellpose
 
-## Spot detection (BigFish)
+## Spot detection
 Save files as png in subdirectories
 Uses Python
 
