@@ -1,0 +1,283 @@
+---
+title: "smFISH quantification report `r format(Sys.Date(), '%Y-%m-%d')`"
+author: "Naly Torres"
+date: "8/28/2024"
+output: html_document
+---
+
+
+```{r echo=FALSE, warning=FALSE} 
+
+library(png)
+library(knitr)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+#install.packages("ggplot2")
+library(ggsignif)
+#install.packages("scales")
+library(svglite)
+library(ggridges)
+library(scales)
+
+
+```
+
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+
+# Define the parent directory containing CSV files
+parent_directory <- "/Users/nalytorres/Documents/01_ce-bigfish-post-analysis/03_density_plots/150uM-Nocodazole/erm-1_04"
+
+# List all CSV files in the directory
+csv_files <- list.files(path = parent_directory, pattern = "\\.csv$", full.names = TRUE)
+
+# Check if there are any CSV files found
+if (length(csv_files) > 0) {
+    # Read the first CSV file
+    data <- read.csv(csv_files[1])
+
+    # Flip the x-axis by multiplying Position by -1
+    data$Position..μm. <- data$Position..μm. * -1
+
+    # Define a new output filename
+    output_filename <- file.path(parent_directory, "flipped_data.csv")
+
+    # Save the flipped data to a new CSV file
+    write.csv(data, output_filename, row.names = FALSE)
+
+    # Inform the user that the data has been saved
+    message(paste("Flipped data saved to:", output_filename))
+    
+    # Show the flipped data in a plot
+    ggplot(data, aes(x = Position..μm., y = erm.1_mRNA.Normalized.Intensity)) +
+        geom_line() +
+        geom_point() +
+        labs(title = "Flipped X-Axis Intensity Plot",
+             x = "Position (μm)",
+             y = "Normalized Intensity") +
+        theme_minimal()
+
+    # Display the plot
+    print(ggplot(data, aes(x = Position..μm., y = erm.1_mRNA.Normalized.Intensity)) +
+            geom_line() +
+            geom_point() +
+            labs(title = "Flipped X-Axis Intensity Plot",
+                 x = "Position (μm)",
+                 y = "Normalized Intensity") +
+            theme_minimal())
+
+} else {
+    message("No CSV files found in the directory.")
+}
+
+```
+
+
+
+
+```{r}
+
+
+# Parent directory containing CSV files for all conditions
+parent_directory <- "/Users/nalytorres/Documents/01_ce-bigfish-post-analysis/03_density_plots/0uM-Nocodazole"
+
+
+# Function to read CSV, replace Image ID with CSV name, and modify column names
+read_modify_csv <- function(file_path, subdirectory) {
+  my_df <- read.csv(file_path)
+  my_df$Image_ID <- basename(file_path)
+  my_df$subdirectory <- subdirectory
+  my_df <- my_df[, colnames(my_df) != "X"]
+  current_colnames <- colnames(my_df)
+  new_colnames <- gsub("\\.", " ", current_colnames)
+  colnames(my_df) <- new_colnames
+  return(my_df)
+}
+
+# List all subdirectories (conditions) in the parent directory
+subdirectories <- list.dirs(parent_directory, full.names = FALSE, recursive = FALSE)
+
+# Initialize an empty list to store data frames
+all_data <- list()
+
+# Loop through subdirectories (conditions)
+for (subdirectory in subdirectories) {
+  # List all CSV files in the current subdirectory
+  csv_files <- list.files(path = file.path(parent_directory, subdirectory), pattern = "*.csv", full.names = TRUE)
+  
+  # Loop through CSV files, read data, replace Image ID, and modify column names
+  for (file_path in csv_files) {
+    current_data <- read_modify_csv(file_path, subdirectory)
+    all_data[[file_path]] <- current_data
+  }
+}
+
+# Combine all data frames into one data frame
+combined_data <- bind_rows(all_data)
+
+# Create a new column 'rep' by extracting the last item after the last '_'
+combined_data$embryo <- sub(".*_(.*)$", "\\1", combined_data$subdirectory)
+
+
+# View the updated data frame
+combined_data
+
+
+# Rename columns for simplicity
+combined_data <- combined_data %>%
+  rename(
+    `position` = `Position  μm `,
+    `intensity` = `erm 1_mRNA Normalized Intensity`
+  )
+
+# # Remove columns related to clusters
+# combined_data <- combined_data %>%
+#   select(
+#     `rep`,
+#     `cell_stage`,
+#     `set_3_mRNA_molecules`,
+#     `lin_41_mRNA_molecules`
+#   )
+# 
+# # Pivot the data to long format with renamed columns
+# long_data <- combined_data %>%
+#   pivot_longer(
+#     cols = starts_with("set_3_mRNA") | starts_with("lin_41_mRNA"),
+#     names_to = "mRNA_type",
+#     values_to = "abundance"
+#   ) %>%
+#   mutate(mRNA_type = recode(mRNA_type,
+#                             `set_3_mRNA_molecules` = "set-3_mRNA",
+#                             `lin_41_mRNA_molecules` = "lin-41_mRNA"),
+#          combined_category = paste(cell_stage, mRNA_type, sep = "_")
+#   )
+# 
+# 
+# # Assign the updated data frame to combined_data
+# combined_data <- long_data
+# 
+# print(combined_data)
+str(combined_data)
+
+
+```
+```{r}
+
+
+# Create the plot using the updated column names
+ggplot(combined_data, aes(x = position, y = subdirectory, height = intensity, group = subdirectory)) +
+  geom_density_ridges(stat = "identity", scale = 0.9, fill = "lightblue", color = "blue") +
+  labs(title = "erm-1 mRNA Normalized Intensity vs Position",
+       x = "Position (μm)",
+       y = "Embryo") +
+  theme_minimal()
+
+
+
+```
+```{r}
+library(ggplot2)
+library(ggridges)
+library(dplyr)
+
+# Find the peak position for each subdirectory and center the position values
+centered_data <- combined_data %>%
+  group_by(subdirectory) %>%
+  mutate(peak_position = position[which.max(intensity)]) %>%
+  mutate(centered_position = position - peak_position) %>%
+  ungroup()
+
+# Plot the centered data
+ggplot(centered_data, aes(x = centered_position, y = subdirectory, height = intensity, group = subdirectory)) +
+  geom_density_ridges(stat = "identity", scale = 0.9, fill = "lightblue", color = "blue") +
+  labs(title = "erm-1 mRNA Normalized Intensity vs Centered Position",
+       x = "Centered Position (μm)",
+       y = "Embryo") +
+  theme_minimal()
+
+```
+```{r}
+
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+
+# Find the peak position for each subdirectory and center the position values
+centered_data <- combined_data %>%
+  group_by(subdirectory) %>%
+  mutate(peak_position = position[which.max(intensity)]) %>%
+  mutate(centered_position = position - peak_position) %>%
+  ungroup()
+
+# Generate a color palette based on the number of unique subdirectories
+unique_subdirs <- unique(centered_data$subdirectory)
+n_colors <- length(unique_subdirs)
+color_palette <- brewer.pal(n = n_colors, name = "Set1")  # Use a qualitative color palette
+
+# Create a named vector for color mapping
+color_mapping <- setNames(color_palette, unique_subdirs)
+
+# Create the plot and assign it to a variable
+my_plot <- ggplot() + 
+  geom_line(data = centered_data, 
+            aes(x = centered_position, y = intensity, color = subdirectory, group = subdirectory), 
+            size = 1) +
+  labs(title = "erm-1 mRNA Intensity Profiles in 0um Noco",
+       x = "Centered Position (μm)",
+       y = "Normalized Intensity") +
+  scale_color_manual(values = color_mapping) +  # Use the dynamic color mapping
+  theme_minimal() + 
+  theme(legend.title = element_blank())  # Remove legend title
+
+# Save the plot as SVG with specified output path
+ggsave("/Users/nalytorres/Documents/01_ce-bigfish-post-analysis/03_density_plots/0uM-Nocodazole/density_0uM_nocodazole.svg", my_plot, width = 10, height = 6)
+my_plot
+```
+
+
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+
+# Find the peak position for each subdirectory and center the position values
+centered_data <- combined_data %>%
+  group_by(subdirectory) %>%
+  mutate(peak_position = position[which.max(intensity)]) %>%
+  mutate(centered_position = position - peak_position) %>%
+  ungroup()
+
+# Generate a color palette based on the number of unique subdirectories
+unique_subdirs <- unique(centered_data$subdirectory)
+n_colors <- length(unique_subdirs)
+color_palette <- brewer.pal(n = n_colors, name = "Set1")  # Use a qualitative color palette
+
+# Create a named vector for color mapping
+color_mapping <- setNames(color_palette, unique_subdirs)
+
+# Create the plot and assign it to a variable
+my_plot <- ggplot() + 
+  geom_line(data = centered_data, 
+            aes(x = centered_position, y = intensity, color = subdirectory, group = subdirectory), 
+            size = 1) +
+  labs(title = "erm-1 mRNA Intensity Profiles in 0um Noco",
+       x = "Centered Position (μm)",
+       y = "Normalized Intensity") +
+  scale_color_manual(values = color_mapping) +  # Use the dynamic color mapping
+  theme_minimal() + 
+  theme(legend.title = element_blank())  # Remove legend title
+
+# Save the plot as SVG with specified output path
+ggsave("/Users/nalytorres/Documents/01_bigfish/density_0uM_nocodazole.svg", my_plot, width = 10, height = 6)
+my_plot
+
+```
+
+
+
