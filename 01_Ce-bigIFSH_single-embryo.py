@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Ce-bigFISH: image analysis toolkit for single embryo
+# ### Ce-bigFISH: image analysis toolkit for smFISH images
 
 # #### Input image info:
 
@@ -10,61 +10,147 @@
 
 # # Parameters if running with sbatch script
 import os
-folder_name = os.getenv('FOLDER_NAME')  # Get from environment variables
-output_directory = os.getenv('OUTPUT_DIRECTORY')  # Get from environment variables
 
-Cy5 = os.getenv('Cy5')  # (Q670)
-mCherry = os.getenv('mCherry')  # (Q610)
-FITC = os.getenv('FITC')  # (GFP)
+# Retrieve parameters from environment variables
+folder_name = os.getenv('FOLDER_NAME')
+output_directory = os.getenv('OUTPUT_DIRECTORY')
+
+# Channels
+Cy5 = os.getenv('Cy5')
+mCherry = os.getenv('mCherry')
+FITC = os.getenv('FITC')
 DAPI = os.getenv('DAPI')
 brightfield = os.getenv('brightfield')
 
+# Microscope parameters
+wavelength_cy5 = int(os.getenv('wavelength_cy5', 670))
+wavelength_mCherry = int(os.getenv('wavelength_mCherry', 610))
+na = float(os.getenv('na', 1.42))
+refractive_index_medium = float(os.getenv('refractive_index_medium', 1.515))
 
-#info about your microscope
-wavelength_cy5 = os.getenv('wavelength_cy5') # emmision peak in nm
-wavelength_mCherry = os.getenv('wavelength_mCherry')  # emmision peak in nm
-na = os.getenv('na')  # numerical aperture of microscope
-refractive_index_medium = os.getenv('refractive_index_medium')
+# PSF parameters
+psf_calculator = os.getenv('PSF_CALCULATOR', 'False') == 'True'
+spot_radius_ch0 = tuple(map(int, os.getenv('SPOT_RADIUS_CH0', '1409,340,340').split(',')))
+spot_radius_ch1 = tuple(map(int, os.getenv('SPOT_RADIUS_CH1', '1283,310,310').split(',')))
+voxel_size = tuple(map(int, os.getenv('VOXEL_SIZE', '1448,450,450').split(',')))
 
-voxel_size = os.getenv('voxel_size')   # Microscope pixel size Z,Y,X
+# Image type selection
+dv_images = os.getenv('DV_IMAGES', 'True') == 'True'
+n2d_images = os.getenv('N2D_IMAGES', 'False') == 'True'
+tiff_images = os.getenv('TIFF_IMAGES', 'False') == 'True'
 
 
-# Ensure to check for None values (though environment variables should be set)
+# Feature selection (convert string "True"/"False" to boolean)
+segmentation = os.getenv('SEGMENTATION', 'True') == 'True'
+spot_detection = os.getenv('SPOT_DETECTION', 'True') == 'True'
+
+run_mRNA_heatmaps = os.getenv('RUN_mRNA_HEATMAPS', 'True') == 'True'
+run_protein_heatmaps = os.getenv('RUN_PROTEIN_HEATMAPS', 'True') == 'True'
+analyze_rna_density = os.getenv('ANALYZE_RNA_DENSITY', 'False') == 'True'
+
+generate_donut_mask = os.getenv('GENERATE_DONUT_MASK', 'True') == 'True'
+generate_pgranule_mask = os.getenv('GENERATE_PGRANULE_MASK', 'True') == 'True'
+
+calculate_membrane_colocalization = os.getenv('CALCULATE_MEMBRANE_COLOCALIZATION', 'True') == 'True'
+calculate_nuclei_colocalization = os.getenv('CALCULATE_NUCLEI_COLOCALIZATION', 'True') == 'True'
+calculate_pgranule_colocalization = os.getenv('CALCULATE_PGRANULE_COLOCALIZATION', 'True') == 'True'
+calculate_mRNA_mRNA_colocalization = os.getenv('CALCULATE_mRNA_mRNA_COLOCALIZATION', 'True') == 'True'
+
+# Ensure required parameters are set
 if folder_name is None or output_directory is None:
-    raise ValueError("Both 'folder_name' and 'output_directory' must be provided.")
+    raise ValueError("Both 'FOLDER_NAME' and 'OUTPUT_DIRECTORY' must be provided.")
+
+# Print parameters to verify
+print(f"Processing folder: {folder_name}")
+print(f"Output directory: {output_directory}")
+print(f"Image types: dv={dv_images}, n2d={n2d_images}, tiff={tiff_images}")
+print(f"Channels: Cy5={Cy5}, mCherry={mCherry}, FITC={FITC}, DAPI={DAPI}, Brightfield={brightfield}")
+print(f"Microscope info: Wavelengths (Cy5={wavelength_cy5} nm, mCherry={wavelength_mCherry} nm), NA={na}, Refractive Index={refractive_index_medium}")
+print(f"PSF parameters: spot_radius_ch0={spot_radius_ch0}, spot_radius_ch1={spot_radius_ch1}, voxel_size={voxel_size}")
+print(f"Feature selection: PSF={psf_calculator}, Segmentation={segmentation}, Spot Detection={spot_detection}")
+print(f"Heatmaps: mRNA={run_mRNA_heatmaps}, Protein={run_protein_heatmaps}, RNA Density={analyze_rna_density}")
+print(f"Masks: Donut={generate_donut_mask}, P-Granule={generate_pgranule_mask}")
+print(f"Colocalization: Membrane={calculate_membrane_colocalization}, Nuclei={calculate_nuclei_colocalization}, P-Granule={calculate_pgranule_colocalization}, mRNA-mRNA={calculate_mRNA_mRNA_colocalization}")
 
 
-# In[1]:
+# In[ ]:
+
+
 # #Parameters if running as jupyter notebook
 
-# folder_name = '' #your folder should contain 2 images (.dv and its ref.dv)
+# #Select image type
+# dv_images = False
+# n2d_images = True
+# tiff_images = False
 
+# # folder_name = '/pl/active/onishimura_lab/PROJECTS/naly/bigfish/nd2-nikon_files/01_nd2_test-files'
+# folder_name = '/pl/active/onishimura_lab/PROJECTS/naly/bigfish/nd2-nikon_files/01_nd2_test-files' #your folder should contain 2 images (.dv and its ref.dv)
 
-# #User-defined channel names (set to None if the channel does not exist)
+# # User-defined channel names (set to None if the channel does not exist)
 # Cy5 = "set-3_mRNA"  # (Q670)
 # mCherry = "lin-41_mRNA"  # (Q610)
 # FITC = "nothing"  # (GFP)
 # DAPI = "DAPI"
 # brightfield = "brightfield"
 
-
 # #info about your microscope
-# wavelength_cy5 = 670 # emmision peak in nm
-# wavelength_mCherry = 610  # emmision peak in nm
-# na = 1.42  # numerical aperture of microscope
-# refractive_index_medium = 1.515 # oil refractive index
+# wavelength_cy5 = 670 # emmision peak in nm    #dv Cy5 emission = 670
+# wavelength_mCherry = 610  # emmision peak in nm    #dv mcherry emission = 610
+# na = 1.42  # numerical aperture of microscope   # dv na = 1.42
+# refractive_index_medium = 1.518 # oil refractive index  #dv ri 1.515
 
-# voxel_size = (1448, 450, 450)   # Microscope pixel size Z,Y,X
+# #Select features to calculate
+# psf_calculator = True
+# spot_radius_ch0 = (1409, 340, 340)  # PSF Z,Y,X #Settings used for dv analysis so far 250218 (1409, 340, 340). number tested for nikon scope 250310 -> (1006, 287, 287)
+# spot_radius_ch1 = (1283, 310, 310)  # PSF Z,Y,X #Settings used for dv analysis so far 250218 (1283, 310, 310). number tested for nikon scope 250310 -> (916, 262, 262)
+# voxel_size = (1448, 450, 450)   # Microscope pixel size in nm (Z,Y,X) #Settings used for dv analysis so far 250218 (1448, 450, 450). number tested for nikon scope 250310 -> (200, 6450, 6450)
 
-# # Create output folder if it doesn't exist
-# output_directory = folder_name + "_results"
-# if not os.path.exists(output_directory):
-#     os.makedirs(output_directory)
-    
-# In[2]:
+# segmentation = False
+# spot_detection = True
+
+# run_mRNA_heatmaps = True
+# run_protein_heatmaps = True
+# analyze_rna_density = False
+
+# generate_donut_mask = True
+# generate_pgranule_mask = True
+
+# calculate_membrane_colocalization = True
+# calculate_nuclei_colocalization = True
+# calculate_pgranule_colocalization = True
+# calculate_mRNA_mRNA_colocalization = True
+
+
+# In[ ]:
+
+
+# PSF calculator 
+if psf_calculator:
+    # #ch0 - 670 channel (Cy5)
+    # Calculate lateral PSF for Cy5 channel using Em λ
+    fwhm_xy_cy5 = 0.61 * wavelength_cy5 / na
+    # Calculate axial PSF for Cy5 channel
+    fwhm_z_cy5 = 2 * refractive_index_medium * wavelength_cy5 / na**2
+    # # Print the result
+    print(f"Lateral (xy) PSF for Cy5 channel: {fwhm_xy_cy5} nm")
+    print(f"Axial (z) PSF for Cy5 channel with 60x oil objective: {fwhm_z_cy5} nm")
+
+
+    # #ch1 - mCherry channel
+    # Calculate lateral PSF for mCherry using Em λ
+    fwhm_xy = 0.61 * wavelength_mCherry / na
+    # Calculate axial PSF
+    fwhm_z = 2 * refractive_index_medium * wavelength_mCherry / na**2
+    # # Print the result
+    print(f"Lateral (xy) PSF: {fwhm_xy} nm")
+    print(f"Axial (z) PSF with 60x oil objective: {fwhm_z} nm")
+
+
+# In[ ]:
 
 
 #import packages:
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -104,10 +190,12 @@ import matplotlib.pyplot as plt
 import cv2
 import tifffile
 
-# pip install nd2
 # pip install plotly
 # pip install ipywidgets
 # pip install ipympl
+
+# pip install nd2
+import nd2
 
 from mpl_toolkits.mplot3d import Axes3D
 import cv2
@@ -118,100 +206,191 @@ from scipy.ndimage import center_of_mass
 import multiprocessing as mp
 
 from IPython.display import Audio
-import warnings
-warnings.filterwarnings("ignore")
+from scipy.ndimage import gaussian_filter
+from scipy.spatial import cKDTree
+from scipy.ndimage import label
+
+from skimage import measure, morphology
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.transform import resize
 
 
 # #### Image dimensions sanity check:
 
-# In[3]:
+# In[ ]:
 
 
-#check image dimensions
-print("Folder Name:", folder_name)
-# Reading the microscopy data
-current_directory = os.getcwd()
-folder_path = os.path.join(current_directory, folder_name)
+# #Read in Deltavision files
 
-if os.path.exists(folder_path):
-    # List the files in the folder
-    list_filenames = os.listdir(folder_path)
-    list_filenames = sorted(list_filenames)
-    path_files = [os.path.join(folder_path, filename) for filename in list_filenames if not filename.startswith('.ipynb_checkpoints')]
+if dv_images:
+    # Reading the microscopy data
+    current_directory = os.getcwd()
+    folder_path = os.path.join(current_directory, folder_name)
 
-    # Read DV files and store image stacks in list_images
-    list_images = []
-    for image in path_files:
-        image_stack = stack.read_dv(image)
-        list_images.append(image_stack)
+    if os.path.exists(folder_path):
+        # List the files in the folder
+        list_filenames = os.listdir(folder_path)
+        list_filenames = sorted(list_filenames)
+        path_files = [os.path.join(folder_path, filename) for filename in list_filenames if not filename.startswith('.ipynb_checkpoints')]
 
-# Extract Image ID by removing the "_R3D_REF.dv" suffix
-dv_filename = list_filenames[1]
-if dv_filename.endswith("_R3D_REF.dv"):
-    image_name = dv_filename[:-len("_R3D_REF.dv")]
-else:
-    image_name = dv_filename  # In case the suffix is different, just keep the original name
-print(f'Image ID: {image_name}', '\n')
+        # Read DV files and store image stacks in list_images
+        list_images = []
+        for image in path_files:
+            image_stack = stack.read_dv(image)
+            list_images.append(image_stack)
 
-# Print parameters to verify
-print(f"Channels: Cy5={Cy5}, mCherry={mCherry}, FITC={FITC}, DAPI={DAPI}, Brightfield={brightfield}")
-print(f'Microscope info: Wavelengths (Cy5={wavelength_cy5} nm, mCherry={wavelength_mCherry} nm), NA={na}, Refractive Index={refractive_index_medium}, Voxel size: {voxel_size} \n')
+    # Extract Image ID by removing the "_R3D_REF.dv" suffix
+    dv_filename = list_filenames[1]
+    if dv_filename.endswith("_R3D_REF.dv"):
+        image_name = dv_filename[:-len("_R3D_REF.dv")]
+    else:
+        image_name = dv_filename
+    print(f'Image ID: {image_name}', '\n')
+
+    # Converting the image to a specific shape
+    bf = list_images[1]  # [C,Z,Y,X]
+    image_colors = list_images[0]  # Reference [Y,X]
+
+    bf = bf.astype(np.uint16)
+    image_colors = image_colors.astype(np.uint16)
+
+    print(f'Image colors \n{list_filenames[0]}: {image_colors.shape} \n')
+    print(f'Brightfield \n{list_filenames[1]}: {bf.shape}')
+
+    # Create output folder if it doesn't exist
+    output_directory = os.path.join(folder_path, "output")
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+        
+        
+    # Explicitly assign channels from image_colors and bf
+    Cy5_array = image_colors[0, :, :, :] if image_colors[0] is not None else None
+    mCherry_array = image_colors[1, :, :, :] if image_colors[1] is not None else None
+    FITC_array = image_colors[2, :, :, :] if image_colors[2] is not None else None
+    nuclei_array = image_colors[3, :, :, :] if image_colors[3] is not None else None
+    bf = bf if brightfield is not None else None
 
 
-# Converting the image to a specific shape
-bf = list_images[1] # [C,Z,Y,X]
-image_colors = list_images[0] # Reference [Y,X]
+    # Explicitly assign channels from image_colors and bf
+    image_Cy5 = np.max(image_colors[0, :, :, :], axis=0) if image_colors[0] is not None else None
+    image_mCherry = np.max(image_colors[1, :, :, :], axis=0) if image_colors[1] is not None else None
+    image_FITC = np.max(image_colors[2, :, :, :], axis=0) if image_colors[2] is not None else None
+    image_nuclei = np.max(image_colors[3, :, :, :], axis=0) if image_colors[3] is not None else None
+    bf = bf if brightfield is not None else None
 
-bf = bf.astype(np.uint16)
-image_colors = image_colors.astype(np.uint16)
+    # Combine images into a list
+    images = [image_Cy5, image_mCherry, image_FITC, image_nuclei, bf]
+    titles = [Cy5, mCherry, FITC, DAPI, brightfield]
 
-# print(f'Image files: {list_filenames}', '\n')
-print(f'Image colors \n{list_filenames[0]}: {image_colors.shape} \n')
-print(f'Brightfield \n{list_filenames[1]}: {bf.shape} \n')
-# print(f'Image_colors: {image_colors.shape}')
+    # Filter out None entries
+    filtered_images = [(img, title) for img, title in zip(images, titles) if img is not None]
 
-# In[4]:
+    # Plot the filtered images
+    fig, ax = plt.subplots(1, len(filtered_images), figsize=(6 * len(filtered_images), 8))
+
+    # Ensure ax is iterable
+    if len(filtered_images) == 1:
+        ax = [ax]
+
+    for i, (img, title) in enumerate(filtered_images):
+        ax[i].imshow(img, cmap="gray")
+        ax[i].set_title(title, size=20)
+        ax[i].axis("off")
+
+    # Adjust layout and save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_directory, f'colors_{image_name}.png'))
+    plt.show()
 
 
-# List of channel names and their corresponding images
-channels = [Cy5, mCherry, FITC, DAPI, brightfield]
-titles = [Cy5, mCherry, FITC, DAPI, brightfield]
-images = [
-    np.max(image_colors[0, :, :, :], axis=0) if image_colors[0] is not None and Cy5 else None,
-    np.max(image_colors[1, :, :, :], axis=0) if image_colors[1] is not None and mCherry else None,
-    np.max(image_colors[2, :, :, :], axis=0) if image_colors[2] is not None and FITC else None,
-    np.max(image_colors[3, :, :, :], axis=0) if image_colors[3] is not None and DAPI else None,
-    bf if brightfield is not None else None
-]
+# In[ ]:
 
-# Filter out None entries
-filtered_images = [(img, title) for img, title in zip(images, titles) if img is not None]
 
-fig, ax = plt.subplots(1, len(filtered_images), figsize=(6 * len(filtered_images), 8))
+# Process n2d images
 
-# Ensure ax is always iterable, even if there's only one plot
-if len(filtered_images) == 1:
-    ax = [ax]
+if n2d_images:
+    # Reading the microscopy data
+    current_directory = os.getcwd()
+    folder_path = os.path.join(current_directory, folder_name)
 
-for i, (img, title) in enumerate(filtered_images):
-    ax[i].imshow(img)
-    ax[i].set_title(title, size=20)
-    ax[i].axis('off')
+    if os.path.exists(folder_path):
+        # List the files in the folder
+        list_filenames = os.listdir(folder_path)
+        list_filenames = sorted(list_filenames)
+        path_files = [
+            os.path.join(folder_path, filename)
+            for filename in list_filenames
+            if not filename.startswith(".ipynb_checkpoints")
+        ]
 
-# Adjust layout if necessary
-plt.tight_layout()
+        # Read ND2 files and store image stacks in list_images
+        list_images = []
+        for image in path_files:
+            image_stack = nd2.imread(image)  # Read ND2 image
+            list_images.append(image_stack)
 
-# Save the plots in the results folder
-plt.savefig(os.path.join(output_directory, 'colors_' + image_name + '.png'))
+    # Extract Image ID
+    image_name = list_filenames[0]
+    print(f"Image ID: {image_name}\n")
 
-plt.show()
+    # Check the dimensions of the first image stack
+    image_colors = list_images[0]  # Example shape: [T, C, Y, X]
+    print(f"Image colors \n{list_filenames[0]}: {image_colors.shape}\n")
+
+
+    # Create output folder if it doesn't exist
+    output_directory = os.path.join(folder_path, "output")
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    # Define channel names and process max projections
+    channels = [Cy5, mCherry, FITC, DAPI, brightfield]
+    titles = channels
+
+    # Explicitly assign channels from image_colors and bf
+    Cy5_array = image_colors[:, 0, :, :] if image_colors[0] is not None else None
+    mCherry_array = image_colors[:, 1, :, :] if image_colors[1] is not None else None
+    FITC_array = image_colors[:, 2, :, :] if image_colors[2] is not None else None
+    nuclei_array = image_colors[:, 3, :, :] if image_colors[3] is not None else None
+    bf = image_colors[:, 4, :, :] if image_colors[4] is not None else None
+    
+    # Explicitly process each channel
+    image_Cy5 = np.max(image_colors[:, 0, :, :], axis=0) if Cy5 else None
+    image_mCherry = np.max(image_colors[:, 1, :, :], axis=0) if mCherry else None
+    image_FITC = np.max(image_colors[:, 2, :, :], axis=0) if FITC else None
+    image_nuclei = np.max(image_colors[:, 3, :, :], axis=0) if DAPI else None
+    bf = np.max(image_colors[:, 4, :, :], axis=0) if brightfield else None ## something diff here
+
+    # Combine the images into a list
+    images = [image_Cy5, image_mCherry, image_FITC, image_nuclei, bf]
+
+    # Filter out None entries
+    filtered_images = [(img, title) for img, title in zip(images, titles) if img is not None]
+
+    # Plotting the images
+    fig, ax = plt.subplots(1, len(filtered_images), figsize=(6 * len(filtered_images), 8))
+
+    # Ensure ax is always iterable, even if there's only one plot
+    if len(filtered_images) == 1:
+        ax = [ax]
+
+    for i, (img, title) in enumerate(filtered_images):
+        ax[i].imshow(img, cmap="gray")
+        ax[i].set_title(title, size=20)
+        ax[i].axis("off")
+
+    # Adjust layout and save the plots in the results folder
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_directory, "colors_" + image_name + ".png"))
+    plt.show()
 
 
 # ### 1. Segmentation
 
 # #### 1.1 Single cell segmentation (up to 4-cell embryos)
 
-# In[5]:
+# In[ ]:
 
 
 # Additional functions used for segmentation
@@ -296,7 +475,8 @@ def metric_max_cells_and_area( masks):
 def nuclear_segmentation(image_nuclei):
     MIN_CELL_SIZE = 1000
     list_masks_nuclei = []
-    list_thresholds = np.arange(0.7,0.95, 0.05)
+#     list_thresholds = np.arange(0.7,0.95, 0.05) # for dv images
+    list_thresholds = np.arange(0.7,0.95, 0.05) # for nd2 images
     array_number_detected_masks = np.zeros(len(list_thresholds))
     for i,tested_ts in enumerate(list_thresholds):
         image_nuclei_binary = image_nuclei.copy()
@@ -332,7 +512,7 @@ def cytosol_segmentation(image_cytosol,second_image_cytosol,cytosol_diameter):
     return masks_cytosol
 
 
-# In[6]:
+# In[ ]:
 
 
 def segmentation_optimization(image_cytosol,image_nuclei,cytosol_diameter,second_image_cytosol=None):
@@ -357,7 +537,7 @@ def segmentation_optimization(image_cytosol,image_nuclei,cytosol_diameter,second
     return masks_nuclei, masks_cytosol,list_masks_nuc_sizes, list_masks_cyto_sizes
 
 
-# In[7]:
+# In[ ]:
 
 
 # Codes used to segment the nucleus and the cytosol
@@ -403,113 +583,26 @@ def segmentation(image_cytosol,image_nuclei, second_image_cytosol=None):
     return masks_cytosol, masks_nuclei, masks_cyto_sizes, masks_nuc_sizes
 
 
-# In[8]:
+# In[ ]:
 
 
 # # Run segmentation functions
+if segmentation:
+    image_cytosol = bf
+    second_image_cytosol = image_nuclei
+    masks_cytosol, masks_nuclei,list_masks_cyto_sizes, list_masks_nuc_sizes = segmentation(image_cytosol,image_nuclei,second_image_cytosol)
 
-image_nuclei = np.max(image_colors[3, :, :, :], axis=0)
-image_cytosol = bf
-second_image_cytosol = np.max(image_colors[3,:,:,:],axis=0 )
-masks_cytosol, masks_nuclei,list_masks_cyto_sizes, list_masks_nuc_sizes = segmentation(image_cytosol,image_nuclei,second_image_cytosol)
+    segmentation_filename = os.path.join(output_directory, 'segmentation_' + image_name + '.png')
 
-segmentation_filename = os.path.join(output_directory, 'segmentation_' + image_name + '.png')
-
-# Ensure the directory exists
-# os.makedirs(segmentation_filename, exist_ok=True)
-
-# Save the figure
-plt.savefig(segmentation_filename)
-
-
-# #### 1.2 Interactive segmentation (manual for each embryo)
-
-# In[9]:
-
-# import ipywidgets as widgets
-# from IPython.display import display
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import cv2
-# import tifffile
-# from matplotlib import pyplot as plt
-
-# class ManualSegmentation():
-
-#     def __init__(self, image, cmap='Spectral', polygon_color=(255, 0, 0)):
-#         self.image = self.process_image(image)
-#         self.polygon_color = polygon_color
-#         self.selected_points = []
-
-#         # Set up interactive plot for Jupyter Notebook
-#         self.figure_to_draw_points, self.axes_in_figure = plt.subplots(figsize=(5, 5))
-#         self.new_image = self.axes_in_figure.imshow(self.image, cmap=cmap)
-
-#         # Create an interactive widget for the click event
-#         self.fig_canvas = self.figure_to_draw_points.canvas
-#         self.fig_canvas.mpl_connect('button_press_event', self.onclick)
-#         plt.show()
-
-#     def process_image(self, image):
-#         # Normalize the image to [0, 255]
-#         processed_image = (image - image.min()) / (image.max() - image.min()) * 255
-#         return processed_image
-
-#     def polygon(self, new_image, points_in_polygon):
-#         points_in_polygon = np.array(points_in_polygon, np.int32)
-#         points_in_polygon = points_in_polygon.reshape((-1, 1, 2))
-#         cv2.polylines(new_image, [points_in_polygon], isClosed=True, color=self.polygon_color, thickness=3)
-#         return new_image
-
-#     def onclick(self, event):
-#         if event.xdata is not None and event.ydata is not None:
-#             self.selected_points.append([int(event.xdata), int(event.ydata)])
-#             updated_image = self.polygon(np.copy(self.image), self.selected_points)
-
-#             for point in self.selected_points:
-#                 cv2.circle(updated_image, tuple(point), radius=3, color=self.polygon_color, thickness=-1)
-
-#             self.new_image.set_data(updated_image)
-#             self.figure_to_draw_points.canvas.draw()
-
-#     def close_and_save(self, filename='temp_mask.tif', save_mask=True):
-#         if self.selected_points:
-#             # Create an empty array with the same shape as the image slice
-#             mask = np.zeros(self.image.shape[:2], dtype=np.uint8)
-
-#             # Convert selected points to a numpy array for cv2.fillPoly
-#             mask_array = np.array([self.selected_points], dtype=np.int32)
-
-#             # Create the mask
-#             cv2.fillPoly(mask, mask_array, 255)  # Fill with white (255)
-
-#             if save_mask:
-#                 # Save the mask as a tif file
-#                 tifffile.imwrite(filename, mask, dtype='uint8')
-#                 print(f'Mask saved as {filename}')
-
-#             # Return the mask as a boolean mask
-#             return mask.astype(bool)
-#         else:
-#             print('No points selected to create a mask.')
-#             return None
-
-# # Example usage:
-# # Assuming `image_colors` is a pre-loaded 3D numpy array (e.g., RGB image)
-# image = (image_colors[2, :, :, :])  # Replace this with your actual image
-
-# mask_object = ManualSegmentation(
-#     image=np.max(image, axis=0), 
-#     cmap='Spectral'
-# )
-
+    # Save the figure
+    plt.savefig(segmentation_filename)
 
 
 # ### 2. Spot detection
 
 # #### 2.1 Spot detection (automated threshold selection and spot detection)
 
-# In[10]:
+# In[ ]:
 
 
 #@title Codes used for spot detection
@@ -553,7 +646,7 @@ def spot_detection(rna,voxel_size,spot_radius,masks_cytosol):
     spots_post_clustering, clusters = detection.detect_clusters(
         spots=spots_post_decomposition,
         voxel_size=voxel_size,
-        radius=626, #626
+        radius=1000, #626
         nb_min_spots=10)
 
     #plotting
@@ -614,105 +707,88 @@ def spot_detection(rna,voxel_size,spot_radius,masks_cytosol):
     return spots_post_clustering, clusters, list_spots_in_each_cell, list_clusters_in_each_cell
 
 
-# In[11]:
+# In[ ]:
 
 
-# PSF calculator 
-wavelength_mCherry = 610  # wavelength in nm -> specified above
-wavelength_cy5 = 670  # wavelength in nm -> specified above
-na = 1.42  # numerical aperture -> specified above
-refractive_index_medium = 1.515  # refractive index of imaging medium (oil)
+# #Run spot detection functions
+if spot_detection:
+    if Cy5 is not None and image_Cy5 is not None:
+        rna_ch0 = Cy5_array # [Z,Y,X,C]
+    #     rna_ch0 = rna_ch0.astype(np.uint16)
+        rna_channel = Cy5
+        detection_color = "red"
+        spots_post_clustering_ch0, clusters_ch0,list_spots_in_each_cell_ch0,list_clusters_in_each_cell_ch0 = spot_detection(rna_ch0,voxel_size,spot_radius_ch0,masks_cytosol)
 
-
-# #ch1 - mCherry channel
-# Calculate lateral PSF
-fwhm_xy = 0.61 * wavelength_mCherry / na
-# Calculate axial PSF
-fwhm_z = 2 * refractive_index_medium * wavelength_mCherry / na**2
-# Print the result
-print(f"Lateral (xy) PSF: {fwhm_xy} nm")
-print(f"Axial (z) PSF with 60x oil objective: {fwhm_z} nm")
-
-
-# #ch0 - Cy5 channel
-# Calculate lateral PSF for Cy5 channel
-fwhm_xy_cy5 = 0.61 * wavelength_cy5 / na
-# Calculate axial PSF for Cy5 channel
-fwhm_z_cy5 = 2 * refractive_index_medium * wavelength_cy5 / na**2
-# Print the result for Cy5 channel
-print(f"Lateral (xy) PSF for Cy5 channel: {fwhm_xy_cy5} nm")
-print(f"Axial (z) PSF for Cy5 channel with 60x oil objective: {fwhm_z_cy5} nm")
-
-
-# In[12]:
-
-
-voxel_size = (1448, 450, 450)   # Microscope pixel size Z,Y,X
-spot_radius_ch0 = (1006, 287, 287)  # PSF Z,Y,X
-spot_radius_ch1 = (1283, 310, 310)  # PSF Z,Y,X
-
-
-if Cy5 is not None and image_colors[0,:,:,:] is not None:
-    rna_ch0 = image_colors[0,:,:,:] # [Z,Y,X,C]
-#     rna_ch0 = rna_ch0.astype(np.uint16)
-    rna_channel = Cy5
-    detection_color = "red"
-    spots_post_clustering_ch0, clusters_ch0,list_spots_in_each_cell_ch0,list_clusters_in_each_cell_ch0 = spot_detection(rna_ch0,voxel_size,spot_radius_ch0,masks_cytosol)
-
-if mCherry is not None and image_colors[1,:,:,:] is not None:
-    rna_ch1 = image_colors[1,:,:,:] # [Z,Y,X,C]
-#     rna_ch1 = rna_ch1.astype(np.uint16)
-    rna_channel = mCherry
-    detection_color = "blue"
-    spots_post_clustering_ch1, clusters_ch1,list_spots_in_each_cell_ch1,list_clusters_in_each_cell_ch1 = spot_detection(rna_ch1,voxel_size,spot_radius_ch1,masks_cytosol)
+    if mCherry is not None and image_mCherry is not None:
+        rna_ch1 = mCherry_array # [Z,Y,X,C]
+    #     rna_ch1 = rna_ch1.astype(np.uint16)
+        rna_channel = mCherry
+        detection_color = "blue"
+        spots_post_clustering_ch1, clusters_ch1,list_spots_in_each_cell_ch1,list_clusters_in_each_cell_ch1 = spot_detection(rna_ch1,voxel_size,spot_radius_ch1,masks_cytosol)
 
 
 # #### 2.2 Save mRNA counts as a dataframe
 
-# In[13]:
+# In[ ]:
 
 
-# Export as csv
+# # Export as csv
+# Initialize an empty DataFrame
 df_quantification = pd.DataFrame()
 
 # Calculate the sum of each list if they are not None
 if 'list_spots_in_each_cell_ch0' in locals() and list_spots_in_each_cell_ch0 is not None:
     sum_spots_ch0 = sum(list_spots_in_each_cell_ch0)
-    sum_clusters_ch0 = sum(list_clusters_in_each_cell_ch0) if 'list_clusters_in_each_cell_ch0' in locals() and list_clusters_in_each_cell_ch0 is not None else None
 else:
     sum_spots_ch0 = None
-    sum_clusters_ch0 = None
+    list_spots_in_each_cell_ch0 = []
 
 if 'list_spots_in_each_cell_ch1' in locals() and list_spots_in_each_cell_ch1 is not None:
     sum_spots_ch1 = sum(list_spots_in_each_cell_ch1)
-    sum_clusters_ch1 = sum(list_clusters_in_each_cell_ch1) if 'list_clusters_in_each_cell_ch1' in locals() and list_clusters_in_each_cell_ch1 is not None else None
 else:
     sum_spots_ch1 = None
-    sum_clusters_ch1 = None
+    list_spots_in_each_cell_ch1 = []
 
 # Check if any sum is not None and skip appending to df_quantification if all are None
-if any(x is not None for x in [sum_spots_ch0, sum_clusters_ch0, sum_spots_ch1, sum_clusters_ch1]):
-    # Create a data dictionary with summed values
+if any(x is not None for x in [sum_spots_ch0, sum_spots_ch1]):
+    # Create a data dictionary with summarized values
     data = {
         'Image ID': image_name,
+        f'{Cy5} total molecules': sum_spots_ch0,  # Generalized label for channel 0
+        f'{mCherry} total molecules': sum_spots_ch1,  # Generalized label for channel 1
     }
 
-    if sum_spots_ch0 is not None or sum_clusters_ch0 is not None:
-        data[f'{Cy5} molecules'] = sum_spots_ch0
-#         data[f'{Cy5} mRNA clusters'] = sum_clusters_ch0
+    # Add per-cell information as individual columns for Cy5 (channel 0)
+    for i, value in enumerate(list_spots_in_each_cell_ch0):
+        data[f'{Cy5} cell_{chr(65 + i)}'] = value  # Generalized label, e.g., Cy5_cell_A, Cy5_cell_B, etc.
 
-    if sum_spots_ch1 is not None or sum_clusters_ch1 is not None:
-        data[f'{mCherry} molecules'] = sum_spots_ch1
-#         data[f'{mCherry} mRNA clusters'] = sum_clusters_ch1
+    # Add per-cell information as individual columns for mCherry (channel 1)
+    for i, value in enumerate(list_spots_in_each_cell_ch1):
+        data[f'{mCherry} cell_{chr(65 + i)}'] = value  # Generalized label, e.g., mCherry_cell_A, mCherry_cell_B, etc.
 
-    # Concatenate the data as a new row to the DataFrame
+    # Count the number of nuclei to categorize embryos automatically
+    # Label the connected regions
+    labeled_array, num_features = label(masks_nuclei)
+
+    # Add `cell_stage` as a new column
+    data['cell_stage'] = num_features
+
+    # Append the data as a new row to the DataFrame
     df_quantification = pd.concat([df_quantification, pd.DataFrame([data])], ignore_index=True)
 
-    quantification_output = os.path.join(output_directory, 'quantification_' + image_name + '.csv')
-
     # Save the DataFrame to CSV
+    quantification_output = os.path.join(output_directory, 'quantification_' + image_name + '.csv')
     df_quantification.to_csv(quantification_output, index=False)
 
+# Dynamically generate column order for cells
+cy5_cell_columns = [f'{Cy5} cell_{chr(65 + i)}' for i in range(len(list_spots_in_each_cell_ch0))]
+mcherry_cell_columns = [f'{mCherry} cell_{chr(65 + i)}' for i in range(len(list_spots_in_each_cell_ch1))]
+
+# Define the new column order (generalized with Cy5 and mCherry)
+new_column_order = ['Image ID', 'cell_stage'] + cy5_cell_columns + [f'{Cy5} total molecules'] + mcherry_cell_columns + [f'{mCherry} total molecules']
+
+# Reorganize the DataFrame columns
+df_quantification = df_quantification[new_column_order]
 
 # Display the DataFrame (optional)
 df_quantification
@@ -720,93 +796,89 @@ df_quantification
 
 # #### 2.3 mRNA Abundance Heatmap
 
-# In[14]:
+# In[ ]:
 
 
 # Generate heatmaps of mRNA abundance in each channel
 
-def create_heatmap(spots_x, spots_y, masks_cytosol, masks_nuclei, output_filename, title_suffix, grid_width=80, grid_height=80):
-    # Calculate the width and height of each grid cell
-    img_width, img_height = masks_cytosol.shape[1], masks_cytosol.shape[0]
-    cell_width = img_width / grid_width
-    cell_height = img_height / grid_height
+if run_mRNA_heatmaps:
+    def create_heatmap(spots_x, spots_y, masks_cytosol, masks_nuclei, output_filename, title_suffix, grid_width=80, grid_height=80):
+        # Calculate the width and height of each grid cell
+        img_width, img_height = masks_cytosol.shape[1], masks_cytosol.shape[0]
+        cell_width = img_width / grid_width
+        cell_height = img_height / grid_height
 
-    # Create an empty grid to store the spot counts
-    grid = np.zeros((grid_height, grid_width), dtype=int)
+        # Create an empty grid to store the spot counts
+        grid = np.zeros((grid_height, grid_width), dtype=int)
 
-    # Count spots in each grid cell
-    for x, y in zip(spots_x, spots_y):
-        # Determine which grid cell the spot belongs to
-        cell_x = int(x / cell_width)
-        cell_y = int(y / cell_height)
+        # Count spots in each grid cell
+        for x, y in zip(spots_x, spots_y):
+            # Determine which grid cell the spot belongs to
+            cell_x = int(x / cell_width)
+            cell_y = int(y / cell_height)
 
-        # Increment the count in the corresponding grid cell
-        if 0 <= cell_x < grid_width and 0 <= cell_y < grid_height:
-            grid[cell_y, cell_x] += 1
+            # Increment the count in the corresponding grid cell
+            if 0 <= cell_x < grid_width and 0 <= cell_y < grid_height:
+                grid[cell_y, cell_x] += 1
 
-    # Create a heatmap
-    plt.imshow(masks_cytosol, cmap='gray')  # Display the original image
-    plt.imshow(masks_nuclei, cmap='gray')
-    plt.imshow(grid, cmap='CMRmap', alpha=1, interpolation='nearest')  # Overlay the heatmap
-    plt.title(f'mRNA Abundance Heatmap ({title_suffix})')
-    plt.axis('off')
+        # Create a heatmap
+        plt.imshow(masks_cytosol, cmap='gray')  # Display the original image
+        plt.imshow(masks_nuclei, cmap='gray')
+        plt.imshow(grid, cmap='CMRmap', alpha=1, interpolation='nearest')  # Overlay the heatmap
+        plt.title(f'mRNA Abundance Heatmap ({title_suffix})')
+        plt.axis('off')
 
-    # Create a vertical color bar
-    cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
-    cbar.ax.text(1, 1.05, 'Higher\nlevels', transform=cbar.ax.transAxes, ha='center')
-    cbar.ax.text(1, -0.19, 'Lower\nlevels', transform=cbar.ax.transAxes, ha='center')
-    cbar.set_ticks([])
+        # Create a vertical color bar
+        cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
+        cbar.ax.text(1, 1.05, 'Higher\nlevels', transform=cbar.ax.transAxes, ha='center')
+        cbar.ax.text(1, -0.19, 'Lower\nlevels', transform=cbar.ax.transAxes, ha='center')
+        cbar.set_ticks([])
 
-    # Save the plots in the results folder
-    plt.savefig(output_filename)
-    plt.show()
+        # Save the plots in the results folder
+        plt.savefig(output_filename)
+        plt.show()
+    #     plt.close()
 
-    # Return the grid for further processing
-    return grid
+        # Return the grid for further processing
+        return grid
 
-# Initialize variables for storing the heatmaps
-cy5_heatmap = None
-mcherry_heatmap = None
+    # Initialize variables for storing the heatmaps
+    cy5_heatmap = None
+    mcherry_heatmap = None
 
-# Generate heatmap for channel 0 (Cy5) if spots_post_clustering_ch0 is defined
-if 'spots_post_clustering_ch0' in locals():
-    spots_x_ch0 = spots_post_clustering_ch0[:, 2]
-    spots_y_ch0 = spots_post_clustering_ch0[:, 1]
-    cy5_heatmap = create_heatmap(spots_x_ch0, spots_y_ch0, masks_cytosol, masks_nuclei, os.path.join(output_directory, f'{Cy5}_heatmap.png'), Cy5)
+    # Generate heatmap for channel 0 (Cy5) if spots_post_clustering_ch0 is defined
+    if 'spots_post_clustering_ch0' in locals():
+        spots_x_ch0 = spots_post_clustering_ch0[:, 2]
+        spots_y_ch0 = spots_post_clustering_ch0[:, 1]
+        cy5_heatmap = create_heatmap(spots_x_ch0, spots_y_ch0, masks_cytosol, masks_nuclei, os.path.join(output_directory, f'{Cy5}_heatmap.png'), Cy5)
 
-# Generate heatmap for channel 1 (mCherry) if spots_post_clustering_ch1 is defined
-if 'spots_post_clustering_ch1' in locals():
-    spots_x_ch1 = spots_post_clustering_ch1[:, 2]
-    spots_y_ch1 = spots_post_clustering_ch1[:, 1]
-    mcherry_heatmap = create_heatmap(spots_x_ch1, spots_y_ch1, masks_cytosol, masks_nuclei, os.path.join(output_directory, f'{mCherry}_heatmap.png'), mCherry)
+    # Generate heatmap for channel 1 (mCherry) if spots_post_clustering_ch1 is defined
+    if 'spots_post_clustering_ch1' in locals():
+        spots_x_ch1 = spots_post_clustering_ch1[:, 2]
+        spots_y_ch1 = spots_post_clustering_ch1[:, 1]
+        mcherry_heatmap = create_heatmap(spots_x_ch1, spots_y_ch1, masks_cytosol, masks_nuclei, os.path.join(output_directory, f'{mCherry}_heatmap.png'), mCherry)
 
 
-# In[15]:
+# In[ ]:
 
 
 # #Tidy up before plotting
 
-# Show reference image in 2D
-#2D mRNA channel image for background
-rna_max_ch0 = np.max(image_colors[0, :, :, :], axis=0)  # Cy5 channel
-rna_max_ch1 = np.max(image_colors[1, :, :, :], axis=0)  # mCherry channel
+# Clean arrays to calculate special features in 3D
+ch0_array = spots_post_clustering_ch0
+# Check if the array has exactly 4 columns
+if ch0_array.shape[1] == 4 :
+    # Remove the last column
+    ch0_array = ch0_array[:, :-1]
+#     print("Last column removed.")
+else:
+    # Keep the array unchanged
+    ch0_array  = ch0_array
+#     print("Array unchanged.")
 
-
-# # Clean arrays to calculate special features in 3D
-# ch0_array = spots_post_clustering_ch0
-# # Check if the array has exactly 4 columns
-# if ch0_array.shape[1] == 4 :
-#     # Remove the last column
-#     ch0_array = ch0_array[:, :-1]
-# #     print("Last column removed.")
-# else:
-#     # Keep the array unchanged
-#     ch0_array  = ch0_array
-# #     print("Array unchanged.")
-
-# # Display the cleaned array
-# # print("Cleaned ch0 array:")
-# # print(ch0_array)
+# Display the cleaned array
+# print("Cleaned ch0 array:")
+# print(ch0_array)
 
 print("\n")
 
@@ -831,912 +903,862 @@ else:
 
 # #### 3.1 mRNA-membrane colocalization 
 
-# In[16]:
+# In[ ]:
 
 
-def generate_donut_mask(original_mask, n, plot=False):
-    # Initialize the final mask
-    donut_mask = np.zeros_like(original_mask)
+# #Generate donut masks to calculate membrane colocalization
+if generate_donut_mask:
+    def generate_donut_mask(original_mask, n, plot=False, output_path=None):
+        # Initialize the final mask
+        donut_mask = np.zeros_like(original_mask)
 
-    for i in np.unique(original_mask):
-        if i == 0:
-            continue  # Skip the background (assuming it's labeled as 0)
-        
-        selected_cel = original_mask == i
+        for i in np.unique(original_mask):
+            if i == 0:
+                continue  # Skip the background (assuming it's labeled as 0)
 
-        # Erode the original mask by n pixels using a disk-shaped structuring element
-        selem = disk(n)
-        eroded_mask = binary_erosion(selected_cel, selem)
+            selected_cel = original_mask == i
 
-        # Create the border mask by subtracting the eroded mask from the original
-        donut = selected_cel & ~eroded_mask
-        donut_mask[donut] = i
+            # Erode the original mask by n pixels using a disk-shaped structuring element
+            selem = disk(n)
+            eroded_mask = binary_erosion(selected_cel, selem)
 
-    # Plotting the border mask if 'plot' is set to True
-    if plot:
-        plt.figure(figsize=(5, 5))
-        plt.imshow(donut_mask, cmap='Greys_r')
-        plt.title(f'Donut Mask')
-        plt.axis('off')
-        plt.show()
+            # Create the border mask by subtracting the eroded mask from the original
+            donut = selected_cel & ~eroded_mask
+            donut_mask[donut] = i
 
-    return donut_mask
+        # Plotting the border mask if 'plot' is set to True
+        if plot:
+            plt.figure(figsize=(5, 5))
+            plt.imshow(donut_mask, cmap='Greys_r')
+            plt.title(f'Donut Mask')
+            plt.axis('off')
 
-# Example usage:
-cytosol_donut_mask = generate_donut_mask(masks_cytosol, n=20, plot=True)
-nuclei_donut_mask = generate_donut_mask(masks_nuclei, n=20, plot=True)
+            # Save the plot to the specified output path
+            if output_path:
+                plt.savefig(output_path)
 
-
-# In[17]:
-
-
-#Code to visualize colocalization with p granules
-
-mask = cytosol_donut_mask
-coord = ch1_array
-ndim = 3
-
-spots_in_membranes, spots_out_membranes = bigfish.multistack.identify_objects_in_region(mask, coord, ndim)
-
-# spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
-print("detected spots (on membranes)")
-print("\r shape: {0}".format(spots_in_membranes.shape))
-print("\r dtype: {0}".format(spots_in_membranes.dtype), "\n")
-print("detected spots (in cyto)")
-print("\r shape: {0}".format(spots_out_membranes.shape))
-print("\r dtype: {0}".format(spots_out_membranes.dtype))
-
-in_membranes_output = os.path.join(output_directory, mCherry + '_in_membranes_' + image_name + '.png')
-# plot
-plot.plot_detection(
-    mask,
-    spots=spots_in_membranes, 
-    radius=1, 
-    color="red",
-    path_output= in_membranes_output,
-    title="Red = mRNA on membranes",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-out_membranes_output = os.path.join(output_directory, mCherry + '_out_membranes_' + image_name + '.png')
-# plot
-plot.plot_detection(
-    rna_max_ch1,
-    spots=spots_out_membranes, 
-    radius=1, 
-    color="blue",
-    path_output= out_membranes_output,
-    title="Blue = mRNA in cyto",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-combined_membranes_output = os.path.join(output_directory, mCherry + '_combined_membranes_output_' + image_name + '.png')
-# plot
-plot.plot_detection(
-    rna_max_ch1,
-    spots=[spots_in_membranes, spots_out_membranes], 
-    radius=2, 
-    color=["red", "blue"],
-    path_output= combined_membranes_output,
-    title=f"Red = mRNA on membrane | Blue = mRNA in cyto",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-
-# In[18]:
-
-
-# Quantification: number of spots in membranes and cytoplasm
-num_spots_in_membranes = spots_in_membranes.shape[0]
-# num_spots_in_cyto = spots_out_pgranules.shape[0]
-
-# Add new columns with default values (e.g., NaN)
-df_quantification[f'{mCherry} in membranes'] = np.nan
-# df_quantification['mCherry_out_pgranules'] = np.nan
-
-# Update the new columns with the counts for the specific image ID
-df_quantification.loc[df_quantification['Image ID'] == image_name, f'{mCherry} in membranes'] = num_spots_in_membranes
-# df_quantification.loc[df_quantification['Image ID'] == image_name, 'mCherry_out_pgranules'] = num_spots_in_cyto
-
-# Display the updated DataFrame
-df_quantification
-
-
-# In[19]:
-
-
-def analyze_rna_intensity(image, masks_cytosol, colormap, mRNA_name, image_name, output_directory):
-    """
-    Calculate and plot normalized mean pixel intensity along the grid defined by the ellipse.
-
-    Parameters:
-    - image: 2D or 3D numpy array representing the RNA channel (or image intensity).
-    - masks_cytosol: binary mask of the cytosol.
-    - colormap: colormap to use for plotting.
-    - mRNA_name: label for the RNA channel being analyzed.
-    - image_name: name of the image to be included in the saved file name.
-    - output_directory: directory where to save the plots and CSV data.
-    """
-    # If the image is 3D (z, y, x), perform max projection
-    if image.ndim == 3:
-        image_proj = np.max(image, axis=0)  # max projection along z-axis
-    else:
-        image_proj = image
-
-    binary_image = masks_cytosol.astype(np.uint8)
-
-    # Find contours in the binary image
-    contours = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-
-    # Check if contours exist
-    if contours:
-        cnt = max(contours, key=cv2.contourArea)
-        
-        if len(cnt) >= 5:  # At least 5 points needed to fit an ellipse
-            ellipse = cv2.fitEllipse(cnt)
-            (xc, yc), (d1, d2), angle = ellipse  # d1 = major axis, d2 = minor axis
-
-            # Create figure for the plot
-            fig, ax = plt.subplots()
-            ax.imshow(image_proj, cmap='gray')
-
-            # Draw the ellipse
-            ellipse_patch = patches.Ellipse(xy=(xc, yc), width=d1, height=d2, angle=angle,
-                                            edgecolor='r', facecolor='none', linewidth=2)
-            ax.add_patch(ellipse_patch)
-
-            # Generate grid lines perpendicular to the minor axis
-            num_lines = 50
-            line_positions = np.linspace(-d2 / 2, d2 / 2, num_lines)
-
-            # Generate a colormap with unique colors for each column
-            colormap_values = plt.get_cmap(colormap)(np.linspace(0, 1, num_lines))
-
-            mean_intensities = []
-
-            # Draw lines and calculate mean pixel intensity
-            for i, y in enumerate(line_positions[:-1]):
-                # Define points for the current and next line
-                x1, y1 = (
-                    xc + (d1 / 2) * np.cos(np.deg2rad(angle)) - (y * np.sin(np.deg2rad(angle))),
-                    yc + (d1 / 2) * np.sin(np.deg2rad(angle)) + (y * np.cos(np.deg2rad(angle)))
-                )
-                x2, y2 = (
-                    xc - (d1 / 2) * np.cos(np.deg2rad(angle)) - (y * np.sin(np.deg2rad(angle))),
-                    yc - (d1 / 2) * np.sin(np.deg2rad(angle)) + (y * np.cos(np.deg2rad(angle)))
-                )
-
-                # Draw the grid lines
-                ax.plot([x1, x2], [y1, y2], color=colormap_values[i], linestyle='-', linewidth=0.5)
-
-                # Collect pixel intensities along the line
-                line_coords = np.array([[int(y), int(x)] for y, x in zip(np.linspace(y1, y2, num_lines), np.linspace(x1, x2, num_lines))])
-                pixel_values = image_proj[line_coords[:, 0], line_coords[:, 1]]
-                
-                # Calculate mean pixel intensity
-                mean_intensity = np.mean(pixel_values) if len(pixel_values) > 0 else 0
-                mean_intensities.append(mean_intensity)
-
-            # Normalize intensities
-            mean_intensities = np.array(mean_intensities)
-            max_intensity = np.max(mean_intensities)
-            if max_intensity > 0:
-                normalized_intensity = mean_intensities / max_intensity
-            else:
-                normalized_intensity = mean_intensities  # Avoid division by zero
-
-            # Plot center of mass
-            ax.scatter(xc, yc, color='red', s=50, label='Ellipse Center')
-
-            # Save the ellipse plot
-            ellipse_plot_path = os.path.join(output_directory, f'{mRNA_name}_ellipse_{image_name}.png')
-            plt.title(f"Ellipse and Grid for {mRNA_name}")
-            plt.xlabel("X Coordinate")
-            plt.ylabel("Y Coordinate")
-            ax.set_axis_off()
-            plt.legend()
-            plt.axis('equal')  # Equal aspect ratio
-            plt.savefig(ellipse_plot_path, bbox_inches='tight', dpi=300)
-#             print(f"Ellipse plot saved at {ellipse_plot_path}")
             plt.show()
 
-            # Plot normalized mean pixel intensity with color from colormap for each grid line
-            fig, ax = plt.subplots()
-            positions = np.linspace(-d2 / 2, d2 / 2, len(normalized_intensity))
+        return donut_mask
 
-            # Plot the data points with their corresponding colors from the colormap
-            for i in range(len(positions)):
-                ax.scatter(positions[i], normalized_intensity[i], color=colormap_values[i], s=50, label=f'Grid {i}' if i == 0 else "")
+    # #Run functions to generate donut masks:
+    cytosol_donut_mask = generate_donut_mask(masks_cytosol, n=20, plot=True, output_path=os.path.join(output_directory, f'{image_name}_cytosol_donut.png'))
+    nuclei_donut_mask = generate_donut_mask(masks_nuclei, n=10, plot=True, output_path=os.path.join(output_directory, f'{image_name}_nuclei_donut.png'))
 
-            # Plot a connecting line (optional: using neutral gray for clarity)
-            ax.plot(positions, normalized_intensity, color='gray', linestyle='-', linewidth=1)
 
-            ax.set_xlabel('Position along Body Axis (μm)')
-            ax.set_ylabel('Normalized Mean Pixel Intensity')
-            ax.set_title(f'{mRNA_name} Normalized Intensity Along Body Axis')
-            ax.axvline(x=0, color='red', linestyle='--', linewidth=1, label='Center')
+# In[ ]:
 
-            plt.tight_layout()
 
-            # Save the intensity scatter plot
-            scatter_plot_path = os.path.join(output_directory, f'{mRNA_name}_intensity_{image_name}.png')
-            plt.savefig(scatter_plot_path, bbox_inches='tight', dpi=300)
-#             print(f"Intensity scatter plot saved at {scatter_plot_path}")
-            plt.show()
+#Code to visualize colocalization with membranes
 
-            # Save intensity data to CSV
-            intensity_data = pd.DataFrame({
-                'Position (μm)': positions,
-                f'{mRNA_name} Normalized Intensity': normalized_intensity
-            })
-            output_path = os.path.join(output_directory, f'{image_name}_{mRNA_name}_intensity_data.csv')
-            intensity_data.to_csv(output_path, index=False)
-#             print(f"Saved intensity data for {mRNA_name} at {output_path}")
+if calculate_membrane_colocalization:
+    def calculate_membrane_colocalization(coord, rna_max, output_directory, rna_channel, image_name, plot=True):
+        """
+        Calculate and optionally plot the colocalization of RNA spots with membranes.
+
+        Parameters:
+            coord: np.ndarray
+                The coordinates of RNA spots.
+            rna_max: np.ndarray
+                Maximum projection of the RNA channel for plotting.
+            output_directory: str
+                Directory to save the output plots.
+            rna_channel: str
+                Name of the RNA channel (e.g., "mCherry").
+            image_name: str
+                Name of the image being processed.
+            plot: bool
+                Whether to create and save plots.
+
+        Returns:
+            tuple: (spots_in_membranes, spots_out_membranes)
+        """
+       
+        mask = cytosol_donut_mask  # Cytosol/membrane mask
+        ndim = 3  # 3D data
+
+        # Identify objects in regions
+        spots_in_membranes, spots_out_membranes = bigfish.multistack.identify_objects_in_region(mask, coord, ndim)
+
+        # Log the results
+        print(f'{rna_name} spots detected (on membranes):')
+        print(f"  Shape: {spots_in_membranes.shape}")
+        print(f"  Dtype: {spots_in_membranes.dtype}\n")
+        print(f'{rna_name} spots detected (in cytosol):')
+        print(f"  Shape: {spots_out_membranes.shape}")
+        print(f"  Dtype: {spots_out_membranes.dtype}")
+
+
+        # Plot detected spots on membranes
+        if plot:
+            # Plot detected spots on membranes
+            in_membranes_output = os.path.join(output_directory, rna_channel + '_in_membranes_' + image_name + '.png')
+            plot.plot_detection(
+                mask,
+                spots=spots_in_membranes,
+                radius=1,
+                color="red",
+                path_output=in_membranes_output,
+                title=f'Red = {rna_name} on membranes',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
+
+            # Plot detected spots in cytosol
+            out_membranes_output = os.path.join(output_directory, rna_channel + '_out_membranes_' + image_name + '.png')
+            plot.plot_detection(
+                rna_max,
+                spots=spots_out_membranes,
+                radius=1,
+                color="blue",
+                path_output=out_membranes_output,
+                title=f'Blue = {rna_name} in cytosol',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
+
+            # Combined plot
+            combined_membranes_output = os.path.join(output_directory, rna_channel + '_combined_membranes_output_' + image_name + '.png')
+            plot.plot_detection(
+                rna_max,
+                spots=[spots_in_membranes, spots_out_membranes],
+                radius=2,
+                color=["red", "blue"],
+                path_output=combined_membranes_output,
+                title=f'Red = {rna_name} on membrane | Blue = {rna_name} mRNA in cytosol',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
+
         
+        # Quantification: number of spots in membranes and cytoplasm
+        num_spots_in_membranes = spots_in_membranes.shape[0]
+        # num_spots_in_cyto = spots_out_membranes.shape[0]
+
+        # Add new columns with default values (e.g., NaN)
+        df_quantification[f'{rna_name} in membranes'] = np.nan
+        # df_quantification['mCherry_out_membranes'] = np.nan
+
+        # Update the new columns with the counts for the specific image ID
+        df_quantification.loc[df_quantification['Image ID'] == image_name, f'{rna_name} in membranes'] = num_spots_in_membranes
+        # df_quantification.loc[df_quantification['Image ID'] == image_name, 'mCherry_out_membranes'] = num_spots_in_cyto
+
+        # Display the updated DataFrame
+        df_quantification
+        
+        
+        return spots_in_membranes, spots_out_membranes
+
+    # Call the function for both RNA channels
+    rna_names = [Cy5, mCherry]  # Replace with your actual mRNA names
+    rna_images = [image_Cy5, image_mCherry]  # Replace with your actual 2D/3D RNA images
+    rna_coords = [ch0_array, ch1_array]  # Coordinates for each RNA channel
+
+    for rna_name, rna_image, coord in zip(rna_names, rna_images, rna_coords):
+        spots_in_membranes, spots_out_membranes = calculate_membrane_colocalization(
+            coord=coord,  # Use the specific coordinates for each RNA channel
+            rna_max=rna_image,  # Use the generic rna_max variable for the RNA image
+            output_directory=output_directory,
+            rna_channel=rna_name,  # Pass the RNA name (mCherry or Cy5)
+            image_name=image_name,
+            plot=plot
+        )
+    # # Display the updated DataFrame
+    df_quantification
+
+
+# In[ ]:
+
+
+# #Calculate the density of mRNA across body axis
+if analyze_rna_density:
+    def analyze_rna_density(image, masks_cytosol, colormap, mRNA_name, image_name, output_directory):
+        """
+        Calculate and plot normalized mean pixel density along the grid defined by the ellipse.
+
+        Parameters:
+        - image: 2D or 3D numpy array representing the RNA channel (or image density).
+        - masks_cytosol: binary mask of the cytosol.
+        - colormap: colormap to use for plotting.
+        - mRNA_name: label for the RNA channel being analyzed.
+        - image_name: name of the image to be included in the saved file name.
+        - output_directory: directory where to save the plots and CSV data.
+        """
+        # If the image is 3D (z, y, x), perform max projection
+        if image.ndim == 3:
+            image_proj = np.max(image, axis=0)  # max projection along z-axis
         else:
-            print(f"Not enough points to fit an ellipse for {mRNA_name}.")
-    else:
-        print(f"No contours found in the mask for {mRNA_name}.")
+            image_proj = image
 
-# Example usage
-rna_names = [Cy5, mCherry]  # Replace with your actual mRNA names
-rna_images = [rna_max_ch0, rna_max_ch1]  # Replace with your actual 2D/3D RNA images
-colormap_list = ['PiYG', 'PiYG']  # Different colormaps for each channel
-output_directory = output_directory  # Your output directory
+        binary_image = masks_cytosol.astype(np.uint8)
 
-for mRNA_name, image, colormap in zip(rna_names, rna_images, colormap_list):
-    analyze_rna_intensity(image=image, masks_cytosol=masks_cytosol, colormap=colormap, mRNA_name=mRNA_name, image_name=image_name, output_directory=output_directory)
+        # Find contours in the binary image
+        contours = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+        # Check if contours exist
+        if contours:
+            cnt = max(contours, key=cv2.contourArea)
+
+            if len(cnt) >= 5:  # At least 5 points needed to fit an ellipse
+                ellipse = cv2.fitEllipse(cnt)
+                (xc, yc), (d1, d2), angle = ellipse  # d1 = major axis, d2 = minor axis
+
+                # Create figure for the plot
+                fig, ax = plt.subplots()
+                ax.imshow(image_proj, cmap='gray')
+
+                # Draw the ellipse
+                ellipse_patch = patches.Ellipse(xy=(xc, yc), width=d1, height=d2, angle=angle,
+                                                edgecolor='r', facecolor='none', linewidth=2)
+                ax.add_patch(ellipse_patch)
+
+                # Generate grid lines perpendicular to the minor axis
+                num_lines = 50
+                line_positions = np.linspace(-d2 / 2, d2 / 2, num_lines)
+
+                # Generate a colormap with unique colors for each column
+                colormap_values = plt.get_cmap(colormap)(np.linspace(0, 1, num_lines))
+
+                mean_intensities = []
+
+                # Draw lines and calculate mean pixel intensity
+                for i, y in enumerate(line_positions[:-1]):
+                    # Define points for the current and next line
+                    x1, y1 = (
+                        xc + (d1 / 2) * np.cos(np.deg2rad(angle)) - (y * np.sin(np.deg2rad(angle))),
+                        yc + (d1 / 2) * np.sin(np.deg2rad(angle)) + (y * np.cos(np.deg2rad(angle)))
+                    )
+                    x2, y2 = (
+                        xc - (d1 / 2) * np.cos(np.deg2rad(angle)) - (y * np.sin(np.deg2rad(angle))),
+                        yc - (d1 / 2) * np.sin(np.deg2rad(angle)) + (y * np.cos(np.deg2rad(angle)))
+                    )
+
+                    # Draw the grid lines
+                    ax.plot([x1, x2], [y1, y2], color=colormap_values[i], linestyle='-', linewidth=0.5)
+
+                    # Collect pixel intensities along the line
+                    line_coords = np.array([[int(y), int(x)] for y, x in zip(np.linspace(y1, y2, num_lines), np.linspace(x1, x2, num_lines))])
+                    pixel_values = image_proj[line_coords[:, 0], line_coords[:, 1]]
+
+                    # Calculate mean pixel intensity
+                    mean_intensity = np.mean(pixel_values) if len(pixel_values) > 0 else 0
+                    mean_intensities.append(mean_intensity)
+
+                # Normalize intensities
+                mean_intensities = np.array(mean_intensities)
+                max_intensity = np.max(mean_intensities)
+                if max_intensity > 0:
+                    normalized_intensity = mean_intensities / max_intensity
+                else:
+                    normalized_intensity = mean_intensities  # Avoid division by zero
+
+                # Plot center of mass
+                ax.scatter(xc, yc, color='red', s=50, label='Ellipse Center')
+
+                # Save the ellipse plot
+                ellipse_plot_path = os.path.join(output_directory, f'{mRNA_name}_ellipse_{image_name}.png')
+                plt.title(f"Ellipse and Grid for {mRNA_name}")
+                plt.xlabel("X Coordinate")
+                plt.ylabel("Y Coordinate")
+                ax.set_axis_off()
+                plt.legend()
+                plt.axis('equal')  # Equal aspect ratio
+                plt.savefig(ellipse_plot_path, bbox_inches='tight', dpi=300)
+    #             print(f"Ellipse plot saved at {ellipse_plot_path}")
+                plt.show()
+
+                # Plot normalized mean pixel intensity with color from colormap for each grid line
+                fig, ax = plt.subplots()
+                positions = np.linspace(-d2 / 2, d2 / 2, len(normalized_intensity))
+
+                # Plot the data points with their corresponding colors from the colormap
+                for i in range(len(positions)):
+                    ax.scatter(positions[i], normalized_intensity[i], color=colormap_values[i], s=50, label=f'Grid {i}' if i == 0 else "")
+
+                # Plot a connecting line (optional: using neutral gray for clarity)
+                ax.plot(positions, normalized_intensity, color='gray', linestyle='-', linewidth=1)
+
+                ax.set_xlabel('Position along Body Axis (μm)')
+                ax.set_ylabel('Normalized Mean Pixel Intensity')
+                ax.set_title(f'{mRNA_name} Normalized Intensity Along Body Axis')
+                ax.axvline(x=0, color='red', linestyle='--', linewidth=1, label='Center')
+
+                plt.tight_layout()
+
+                # Save the intensity scatter plot
+                scatter_plot_path = os.path.join(output_directory, f'{mRNA_name}_intensity_{image_name}.png')
+                plt.savefig(scatter_plot_path, bbox_inches='tight', dpi=300)
+    #             print(f"Intensity scatter plot saved at {scatter_plot_path}")
+                plt.show()
+
+                # Save density data to CSV
+                density_data = pd.DataFrame({
+                    'Position (μm)': positions,
+                    f'{mRNA_name} Normalized density': normalized_density
+                })
+                output_path = os.path.join(output_directory, f'{image_name}_{mRNA_name}_density_data.csv')
+                density_data.to_csv(output_path, index=False)
+    #             print(f"Saved density data for {mRNA_name} at {output_path}")
+
+            else:
+                print(f"Not enough points to fit an ellipse for {mRNA_name}.")
+        else:
+            print(f"No contours found in the mask for {mRNA_name}.")
+
+    # Call funtion for both mRNA channels
+    rna_names = [Cy5, mCherry]  # Replace with your actual mRNA names
+    rna_images = [rna_max_ch0, rna_max_ch1]  # Replace with your actual 2D/3D RNA images
+    colormap_list = ['PiYG', 'PiYG']  # Different colormaps for each channel
+    output_directory = output_directory  # Your output directory
+
+    for mRNA_name, image, colormap in zip(rna_names, rna_images, colormap_list):
+        analyze_rna_density(image=image, masks_cytosol=masks_cytosol, colormap=colormap, mRNA_name=mRNA_name, image_name=image_name, output_directory=output_directory)
 
 
 # #### 3.2 Nuclear colocalization (transcription sites)
 
-# In[20]:
+# In[ ]:
 
 
-# # masks_nuclei.shape # mask nuclei is a 2D array that contains the 3D data
-# nuc_max = np.max(image_colors[1, :, :, :], axis=0)  # mCherry channel
+# #Calculate nuclear colocalization
 
+# masks_nuclei.shape # mask nuclei is a 2D array that contains the 3D data
+nuc_max = np.max(image_colors[1, :, :, :], axis=0)  # mCherry channel
 
-# # # plot
-# # plot.plot_detection(
-# #     image_nuclei,
-# #     spots=[spots_in, spots_out], 
-# #     radius=1, 
-# #     color=["red", "blue"],
-# #     title=f"Red = {Cy5} | Blue = {mCherry}",
-# #     linewidth=3, contrast=True, framesize=(10, 5))
+if calculate_nuclei_colocalization:
+    def calculate_nuclei_colocalization(coord, rna_max, masks_nuclei, output_directory, rna_channel, image_name, plot=True):
+        """
+        Calculate and optionally plot the colocalization of RNA spots with nuclei.
 
+        Parameters:
+            coord: np.ndarray
+                The coordinates of RNA spots.
+            rna_max: np.ndarray
+                Maximum projection of the RNA channel for plotting.
+            masks_nuclei: np.ndarray
+                Mask of the nuclei region.
+            output_directory: str
+                Directory to save the output plots.
+            rna_channel: str
+                Name of the RNA channel (e.g., "mCherry").
+            image_name: str
+                Name of the image being processed.
+            plot: bool
+                Whether to create and save plots.
 
-# # Visualizing colocalization with nuclei
-# mask = masks_nuclei
-# coord = ch1_array
-# ndim = 3
+        Returns:
+            tuple: (spots_in_nuclei, spots_out_nuclei)
+        """
+        ndim = 3  # 3D data
 
-# spots_in, spots_out = bigfish.multistack.identify_objects_in_region(mask, coord, ndim)
+        # Identify objects in nuclei
+        spots_in_nuclei, spots_out_nuclei = bigfish.multistack.identify_objects_in_region(masks_nuclei, coord, ndim)
 
-# # Output detected spots
-# print("Detected spots (inside nuclei)")
-# print("\r shape: {0}".format(spots_in.shape))
+        # Log the results
+        print(f'{rna_channel} spots detected (in nuclei):')
+        print(f"  Shape: {spots_in_nuclei.shape}")
+        print(f"  Dtype: {spots_in_nuclei.dtype}\n")
+        print(f'{rna_channel} spots detected (in cytoplasm):')
+        print(f"  Shape: {spots_out_nuclei.shape}")
+        print(f"  Dtype: {spots_out_nuclei.dtype}")
 
-# print("Detected spots (in cyto)")
-# print("\r shape: {0}".format(spots_out.shape))
+        if plot:
+            # Plot spots in cytoplasm
+            out_nuclei_output = os.path.join(output_directory, rna_channel + '_in_cyto_' + image_name + '.png')
+            plot.plot_detection(
+                rna_max,
+                spots=spots_out_nuclei,
+                radius=1,
+                color="blue",
+                path_output=out_nuclei_output,
+                title=f'Blue = {rna_channel} in cytoplasm',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
 
-# # Plot and save each visualization
-# cyto_output = os.path.join(output_directory, mCherry + '_in_cyto_' + image_name + '.png')
+            # Plot spots in nuclei
+            in_nuclei_output = os.path.join(output_directory, rna_channel + '_in_nuclei_' + image_name + '.png')
+            plot.plot_detection(
+                masks_nuclei,
+                spots=spots_in_nuclei,
+                radius=1,
+                color="red",
+                path_output=in_nuclei_output,
+                title=f'Red = {rna_channel} in nuclei',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
 
-# # Plot mRNA in cytoplasm
-# plot.plot_detection(
-#     image_nuclei,
-#     spots=spots_out, 
-#     path_output= cyto_output,
-#     radius=1, 
-#     color="blue",
-#     title=f"Blue = {mCherry} in cyto",
-#     linewidth=3, contrast=True, framesize=(10, 5)
-# )
+            # Combined plot
+            combined_output = os.path.join(output_directory, rna_channel + '_combined_nuclei_' + image_name + '.png')
+            plot.plot_detection(
+                rna_max,
+                spots=[spots_in_nuclei, spots_out_nuclei],
+                radius=2,
+                color=["red", "blue"],
+                path_output=combined_output,
+                title=f'Red = {rna_channel} in nuclei | Blue = {rna_channel} in cytoplasm',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
 
-# nuclei_output = os.path.join(output_directory, mCherry + '_in_nuclei_' + image_name + '.png')
+        # Quantification: number of spots in nuclei and cytoplasm
+        num_spots_in_nuclei = spots_in_nuclei.shape[0]
+        # num_spots_in_cyto = spots_out_nuclei.shape[0]
 
-# # Plot mRNA in nuclei
-# plot.plot_detection(
-#     image_nuclei,
-#     spots=spots_in,
-#     path_output= nuclei_output,
-#     radius=1, 
-#     color="red",
-#     title=f"Red = {mCherry} in nuclei",
-#     linewidth=3, contrast=True, framesize=(10, 5)
-# )
+        # Add new columns with default values (e.g., NaN)
+        df_quantification[f'{rna_channel} in nuclei'] = np.nan
+        # df_quantification[f'{rna_channel} out nuclei'] = np.nan
 
-# combined_output = os.path.join(output_directory, mCherry + '_in_nuclei_and_cyto_' + image_name + '.png')
+        # Update the new columns with the counts for the specific image ID
+        df_quantification.loc[df_quantification['Image ID'] == image_name, f'{rna_channel} in nuclei'] = num_spots_in_nuclei
+        # df_quantification.loc[df_quantification['Image ID'] == image_name, f'{rna_channel} out nuclei'] = num_spots_in_cyto
 
-# # Plot combined mRNA in nuclei and cytoplasm
-# plot.plot_detection(
-#     rna_max_ch1,
-#     spots=[spots_in, spots_out], 
-#     path_output= combined_output,
-#     radius=1, 
-#     color=["red", "blue"],
-#     title=f"Red = mRNA in nuclei | Blue = mRNA in cyto",
-#     linewidth=3, contrast=True, framesize=(10, 5)
-# )
+        # Display the updated DataFrame
+        df_quantification
 
+        return spots_in_nuclei, spots_out_nuclei
+    
+    # Call the function for both RNA channels
+    rna_names = [Cy5, mCherry]  # Replace with your actual mRNA names
+    rna_images = [image_Cy5, image_mCherry]  # Replace with your actual 2D/3D RNA images
+    rna_coords = [ch0_array, ch1_array]  # Coordinates for each RNA channel
+    
 
-# In[21]:
-
-
-# # Quantification: number of spots in nuclei and cytoplasm
-# num_spots_in_nuclei = spots_in.shape[0]
-# num_spots_in_cyto = spots_out.shape[0]
-
-# # Add new columns with default values (e.g., NaN)
-# df_quantification[f'{mCherry} in nuclei'] = np.nan
-# # df_quantification['mCherry_in_cyto'] = np.nan
-
-# # Update the new columns for the specific image ID
-# df_quantification.loc[df_quantification['Image ID'] == image_name, f'{mCherry} in nuclei'] = num_spots_in_nuclei
-# # df_quantification.loc[df_quantification['Image ID'] == image_name, 'mCherry_in_cyto'] = num_spots_in_cyto
-
-# # Display the updated DataFrame
-# df_quantification
-
-
-#### 3.3 mRNA-p granule colocalization 
-
-#In[22]:
-
-
-#p-granule mask for co-localization
-
-image_pgranules = np.max(image_colors[2, :, :, :], axis=0)
-
-def mask_pgranule(image_pgranules):
-    MIN_CELL_SIZE = 1
-    list_masks_pgranules = []
-    list_thresholds = np.arange(0.7,0.95, 0.05)
-    array_number_detected_masks = np.zeros(len(list_thresholds))
-    for i,tested_ts in enumerate(list_thresholds):
-        image_pgranules_binary = image_pgranules.copy()
-        max_value_image = np.max(image_pgranules_binary)
-        image_pgranules_binary[image_pgranules_binary < max_value_image*tested_ts] = 0
-        image_pgranules_binary[image_pgranules_binary > max_value_image*tested_ts] = 1
-        labels = measure.label(image_pgranules_binary)
-        filtered_labels = morphology.remove_small_objects(labels, min_size=MIN_CELL_SIZE)
-        unique_filtered_labels = np.unique(filtered_labels)
-        tested_masks_pgranules = np.zeros_like(filtered_labels)
-        for idx, old_label in enumerate(unique_filtered_labels):
-            tested_masks_pgranules[filtered_labels == old_label] = idx
-        list_masks_pgranules.append(tested_masks_pgranules)
-        array_number_detected_masks[i]= metric_max_cells_and_area( tested_masks_pgranules) 
-    selected_index = np.argmax(array_number_detected_masks)
-    masks_pgranules = list_masks_pgranules [selected_index]
-    return masks_pgranules
-
-masks_pgranules = mask_pgranule(image_pgranules)
-
-
-# Plotting
-color_map = 'Greys_r'
-fig, ax = plt.subplots(1,4, figsize=(14, 4))
-# Plotting the heatmap of a section in the image
-ax[0].imshow(image_pgranules,cmap=color_map)
-ax[1].imshow(masks_pgranules,cmap=color_map)
-ax[2].imshow(image_cytosol,cmap=color_map)
-ax[3].imshow(masks_cytosol,cmap=color_map)
-ax[0].set(title='p granules'); ax[0].axis('off');ax[0].grid(False)
-ax[1].set(title='mask p granules'); ax[1].axis('off');ax[1].grid(False)
-ax[2].set(title='brightfield'); ax[2].axis('off');ax[2].grid(False)
-ax[3].set(title='mask cytosol'); ax[3].axis('off');ax[3].grid(False)
-
-# Save the figure
-
-output_path = os.path.join(output_directory, mCherry + '_pgranule_mask_' + image_name + '.png')
-
-plt.savefig(output_path, bbox_inches='tight', pad_inches=0.1)
-
-# Close the figure
-plt.close()
-
-# print(f"p-granule mask saved to {output_path}")
-
-
-# In[23]:
-
-
-#Code to visualize colocalization with p granules
-
-mask = masks_pgranules
-coord = ch1_array
-ndim = 3
-
-spots_in_pgranules, spots_out_pgranules = bigfish.multistack.identify_objects_in_region(mask, coord, ndim)
-
-# spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
-print("detected spots (inside p-granules)")
-print("\r shape: {0}".format(spots_in_pgranules.shape))
-print("\r dtype: {0}".format(spots_in_pgranules.dtype), "\n")
-print("detected spots (outside p-granules)")
-print("\r shape: {0}".format(spots_out_pgranules.shape))
-print("\r dtype: {0}".format(spots_out_pgranules.dtype))
-
-
-
-in_pgranules_output = os.path.join(output_directory, mCherry + '_in_pgranules_output_' + image_name + '.png')
-
-# plot
-plot.plot_detection(
-    mask,
-    spots=spots_in_pgranules, 
-    radius=1, 
-    color="red",
-    path_output= in_pgranules_output,
-    title="Red = mRNA in p-granules",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-out_pgranules_output = os.path.join(output_directory, mCherry + '_out_pgranules_output_' + image_name + '.png')
-
-# plot
-plot.plot_detection(
-    rna_max_ch1,
-    spots=spots_out_pgranules, 
-    radius=1, 
-    color="blue",
-     path_output= out_pgranules_output,
-    title="Red = mRNA out p-granules",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-combined_pgranules_output = os.path.join(output_directory, mCherry + '_combined_pgranules_output_' + image_name + '.png')
-
-# plot
-plot.plot_detection(
-    rna_max_ch1,
-    spots=[spots_in_pgranules, spots_out_pgranules], 
-    radius=2, 
-    path_output= combined_pgranules_output,
-    color=["red", "blue"],
-    title=f"Red = {Cy5} | Blue = {mCherry}",
-    linewidth=3, contrast=True, framesize=(10, 5))
-
-
-# In[24]:
-
-
-# Quantification: number of spots in pgranules and cytoplasm
-num_spots_in_nuclei = spots_in_pgranules.shape[0]
-# num_spots_in_cyto = spots_out_pgranules.shape[0]
-
-# Add new columns with default values (e.g., NaN)
-df_quantification[f'{mCherry} in pgranules'] = np.nan
-# df_quantification['mCherry_out_pgranules'] = np.nan
-
-# Update the new columns with the counts for the specific image ID
-df_quantification.loc[df_quantification['Image ID'] == image_name, f'{mCherry} in pgranules'] = num_spots_in_nuclei
-# df_quantification.loc[df_quantification['Image ID'] == image_name, 'mCherry_out_pgranules'] = num_spots_in_cyto
-
+    # Call the function for each RNA channel
+    for rna_name, rna_image, coord in zip(rna_names, rna_images, rna_coords):
+        spots_in_nuclei, spots_out_nuclei = calculate_nuclei_colocalization(
+            coord=coord,
+            rna_max=rna_image,
+            masks_nuclei=masks_nuclei,
+            output_directory=output_directory,
+            rna_channel=rna_name,
+            image_name=image_name,
+            plot=plot
+        )
 # Display the updated DataFrame
 df_quantification
 
 
+# #### 3.3 mRNA-p granule colocalization 
+
+# In[ ]:
+
+
+#p-granule mask for co-localization
+
+image_pgranules = image_FITC
+image_pgranules = gaussian_filter(image_pgranules, sigma=0.2)
+
+if generate_pgranule_mask:
+    def mask_pgranule(image_pgranules):
+        MIN_CELL_SIZE = 5
+        list_masks_pgranules = []
+        list_thresholds = np.arange(0.4, 0.95, 0.02)
+        array_number_detected_masks = np.zeros(len(list_thresholds))
+        for i,tested_ts in enumerate(list_thresholds):
+            image_pgranules_binary = image_pgranules.copy()
+            max_value_image = np.max(image_pgranules_binary)
+            image_pgranules_binary[image_pgranules_binary < max_value_image*tested_ts] = 0.5
+            image_pgranules_binary[image_pgranules_binary > max_value_image*tested_ts] = 1
+            labels = measure.label(image_pgranules_binary)
+            filtered_labels = morphology.remove_small_objects(labels, min_size=MIN_CELL_SIZE)
+            unique_filtered_labels = np.unique(filtered_labels)
+            tested_masks_pgranules = np.zeros_like(filtered_labels)
+            for idx, old_label in enumerate(unique_filtered_labels):
+                tested_masks_pgranules[filtered_labels == old_label] = idx
+            list_masks_pgranules.append(tested_masks_pgranules)
+            array_number_detected_masks[i]= metric_max_cells_and_area( tested_masks_pgranules) 
+        selected_index = np.argmax(array_number_detected_masks)
+        masks_pgranules = list_masks_pgranules [selected_index]
+        return masks_pgranules
+
+    masks_pgranules = mask_pgranule(image_pgranules)
+
+    # Plotting
+    color_map = 'Greys_r'
+    fig, ax = plt.subplots(1,2, figsize=(10, 4))
+    # Plotting the heatmap of a section in the image
+    ax[0].imshow(image_pgranules,cmap=color_map)
+    ax[1].imshow(masks_pgranules,cmap=color_map, alpha=0.9)
+    ax[0].set(title='p granules'); ax[0].axis('off');ax[0].grid(False)
+    ax[1].set(title='mask p granules'); ax[1].axis('off');ax[1].grid(False)
+
+    # Save the figure
+    output_path = os.path.join(output_directory, mCherry + '_pgranule_mask_' + image_name + '.png')
+
+    plt.savefig(output_path, bbox_inches='tight', pad_inches=0.1)
+    
+
+
+# In[ ]:
+
+
+from skimage import measure, morphology
+from skimage.filters import gaussian, median, threshold_local
+import numpy as np
+import matplotlib.pyplot as plt
+
+def mask_pgranule_within_cytosol(image_pgranules, masks_cytosol, generate_pgranule_mask=True):
+    MIN_CELL_SIZE = 5
+    list_masks_pgranules = []
+    list_thresholds = np.arange(0.5, 0.98, 0.002)
+    array_number_detected_masks = np.zeros(len(list_thresholds))
+
+    # Apply a Gaussian filter to reduce noise and smooth the image
+    image_pgranules = gaussian(image_pgranules, sigma=0.5)  # Adjust sigma if needed
+    image_pgranules = median(image_pgranules, np.ones((3, 3)))  # Optional median filter
+
+    # Mask image_pgranules with the cytosol mask to restrict processing to cytosol area
+    image_pgranules_masked = image_pgranules * masks_cytosol
+
+    for i, tested_ts in enumerate(list_thresholds):
+        image_pgranules_binary = image_pgranules_masked.copy()
+
+        # Apply adaptive thresholding (Local thresholding) only on masked region
+        block_size = 35  # Size of the local window for thresholding
+        adaptive_threshold = threshold_local(image_pgranules_binary, block_size, offset=10)  # Adjust offset for sensitivity
+        
+        # Create a binary image using local thresholding
+        image_pgranules_binary = image_pgranules_binary > adaptive_threshold
+        
+        # Optional: further thresholding based on tested_ts multiplier
+        max_value_image = np.max(image_pgranules_binary)
+        image_pgranules_binary[image_pgranules_binary < max_value_image * tested_ts] = 0
+        image_pgranules_binary[image_pgranules_binary >= max_value_image * tested_ts] = 1
+        
+        # Label connected components
+        labels = measure.label(image_pgranules_binary)
+        
+        # Remove small objects
+        filtered_labels = morphology.remove_small_objects(labels, min_size=MIN_CELL_SIZE)
+        unique_filtered_labels = np.unique(filtered_labels)
+        
+        # Create the masks for the detected p-granules
+        tested_masks_pgranules = np.zeros_like(filtered_labels)
+        for idx, old_label in enumerate(unique_filtered_labels):
+            tested_masks_pgranules[filtered_labels == old_label] = idx
+        
+        list_masks_pgranules.append(tested_masks_pgranules)
+        array_number_detected_masks[i] = metric_max_cells_and_area(tested_masks_pgranules)
+
+    # Select the best threshold based on the number of detected masks
+    selected_index = np.argmax(array_number_detected_masks)
+    masks_pgranules = list_masks_pgranules[selected_index]
+    
+    return masks_pgranules
+
+# Example usage:
+image_pgranules = image_FITC  # Your input image here
+masks_pgranules = mask_pgranule_within_cytosol(image_pgranules, masks_cytosol)
+
+# Plotting
+color_map = 'Greys_r'
+fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+ax[0].imshow(image_pgranules, cmap=color_map)
+ax[1].imshow(masks_pgranules, cmap=color_map, alpha=0.9)
+ax[0].set(title='p granules'); ax[0].axis('off'); ax[0].grid(False)
+ax[1].set(title='mask p granules'); ax[1].axis('off'); ax[1].grid(False)
+
+# Save the figure
+output_path = os.path.join(output_directory, mCherry + '_pgranule_mask_' + image_name + '.png')
+plt.savefig(output_path, bbox_inches='tight', pad_inches=0.1)
+
+
+# In[ ]:
+
+
+#p-granule mask for co-localization
+
+if calculate_pgranule_colocalization:
+    def calculate_pgranule_colocalization(coord, rna_max, masks_pgranules, output_directory, rna_channel, image_name, plot=True):
+        """
+        Calculate and optionally plot the colocalization of RNA spots with p-granules.
+
+        Parameters:
+            coord: np.ndarray
+                The coordinates of RNA spots.
+            rna_max: np.ndarray
+                Maximum projection of the RNA channel for plotting.
+            masks_pgranules: np.ndarray
+                Mask of the p-granule region.
+            output_directory: str
+                Directory to save the output plots.
+            rna_channel: str
+                Name of the RNA channel (e.g., "Cy5").
+            image_name: str
+                Name of the image being processed.
+
+        Returns:
+            tuple: (spots_in_pgranules, spots_out_pgranules)
+        """
+        ndim = 3  # 3D data
+
+        # Identify objects in p-granules
+        spots_in_pgranules, spots_out_pgranules = bigfish.multistack.identify_objects_in_region(masks_pgranules, coord, ndim)
+
+        # Log the results
+        print(f'{rna_channel} spots detected (in p-granules):')
+        print(f"  Shape: {spots_in_pgranules.shape}")
+        print(f"  Dtype: {spots_in_pgranules.dtype}\n")
+        
+
+        if plot:
+            # Plot spots in p-granules
+            in_pgranules_output = os.path.join(output_directory, rna_channel + '_in_pgranules_' + image_name + '.png')
+            plot.plot_detection(
+                rna_max,
+                spots=spots_in_pgranules,
+                radius=1,
+                color="red",
+                path_output=in_pgranules_output,
+                title=f'Red = {rna_channel} in p-granules',
+                linewidth=3,
+                contrast=True,
+                framesize=(10, 5)
+            )
+
+
+        # Quantification: number of spots in p-granules and outside p-granules
+        num_spots_in_pgranules = spots_in_pgranules.shape[0]
+
+        # Add new columns with default values (e.g., NaN)
+        df_quantification[f'{rna_channel} in pgranules'] = np.nan
+
+        # Update the new columns with the counts for the specific image ID
+        df_quantification.loc[df_quantification['Image ID'] == image_name, f'{rna_channel} in pgranules'] = num_spots_in_pgranules
+
+        return spots_in_pgranules, spots_out_pgranules
+
+    # Define RNA channels and other variables
+    rna_names = [Cy5, mCherry]  # Replace with your actual mRNA names
+    rna_images = [image_Cy5, image_mCherry]  # Replace with your actual 2D/3D RNA images
+    rna_coords = [ch0_array, ch1_array]  # Coordinates for each RNA channel
+
+    # Call the function for each RNA channel
+    for rna_name, rna_image, coord in zip(rna_names, rna_images, rna_coords):
+        spots_in_pgranules, spots_out_pgranules = calculate_pgranule_colocalization(
+            coord=coord,
+            rna_max=rna_image,
+            masks_pgranules=masks_pgranules,
+            output_directory=output_directory,
+            rna_channel=rna_name,
+            image_name=image_name,
+            plot=plot  # Pass the boolean flag for plotting
+        )
+
+    # Display the updated DataFrame
+    display(df_quantification)
+
+
 # #### 3.4 mRNA-mRNA colocalization (FLARIM - translating mRNAs)
 
-# In[25]:
+# In[ ]:
 
 
-# def mRNA_coloc(ch0_array, ch1_array, voxel_size, rna_max_ch1, output_directory, image_name, Cy5, mCherry, plot):
-#     # Set threshold and detect co-localized spots
-#     threshold = 5
-#     colocalized_spots = []
-#     (
-#         colocalized_spots_ch0, 
-#         colocalized_spots_ch1, 
-#         distances, 
-#         indices_1, 
-#         indices_2, 
-#         threshold
-#     ) = multistack.detect_spots_colocalization(
-#         spots_1=ch0_array,
-#         spots_2=ch1_array,
-#         voxel_size=voxel_size,
-#         threshold=threshold,
-#         return_indices=True,
-#         return_threshold=True
-#     )
+# #Calculate mRNA-mRNA colocalization
 
-#     # Print details of the co-localized spots
-#     print("colocalized spots")
-#     print(f"Distances: {distances.shape}")
-#     # print(f"Threshold: {threshold:0.2f} nm")
+if calculate_mRNA_mRNA_colocalization:
+    def mRNA_coloc(ch0_array, ch1_array, voxel_size, image_cy5, image_mCherry, image_name, Cy5, mCherry, plot):
+        """
+        Detect colocalized mRNA spots between two channels with flexibility for proximity-based matching.
+        """
+        # Set proximity threshold in voxel space
+        threshold = 5  # Adjust as needed (in pixels or voxel space)
 
-#     # Define output filename
-#     mRNA_mRNA_output = os.path.join(output_directory, f"mRNA_coloc_mRNA_{image_name}.png")
+        # Convert coordinates to nanometers (or keep as is if already in correct units)
+        ch0_scaled = ch0_array * voxel_size
+        ch1_scaled = ch1_array * voxel_size
 
-#     # Plot and save the figure
-#     plot.plot_detection(
-#         rna_max_ch1,
-#         spots=[colocalized_spots_ch0, colocalized_spots_ch1], 
-#         radius=2, 
-#         path_output=mRNA_mRNA_output,
-#         color=["red", "purple"],
-#         title=f"Red = {Cy5} | Blue = {mCherry}",
-#         linewidth=3, contrast=True, framesize=(10, 5)
-#     )
+        # Build KDTree for fast nearest-neighbor search
+        tree = cKDTree(ch1_scaled)
 
-# # Call the function
-# mRNA_coloc(ch0_array, ch1_array, voxel_size, rna_max_ch1, output_directory, image_name, Cy5, mCherry, plot)
+        # Find nearest neighbors for spots in ch0_array
+        distances, indices = tree.query(ch0_scaled, distance_upper_bound=threshold)
 
+        # Filter out matches that exceed the threshold
+        valid_matches = distances < threshold
+        colocalized_spots_ch0 = ch0_array[valid_matches]
+        colocalized_spots_ch1 = ch1_array[indices[valid_matches]]
 
+        # Print summary of colocalized spots
+        print(f"Total {Cy5} spots: {ch0_array.shape[0]}")
+        print(f"Total {mCherry} spots: {ch1_array.shape[0]}")
+        print(f"Colocalized spots: {colocalized_spots_ch0.shape[0]}")
 
-# # #610 channel dual spot overlay 
-# # print(f"spot detection overlay on {mCherry} image")
-# # print(f"{mCherry} spot count: {ch1_array.shape}")
-# # plot.plot_detection(
-# #     rna_max_ch1,
-# #     spots=[ch0_array, ch1_array], 
-# #     radius=1, 
-# #     color=["red", "blue"],
-# #     title=f"Red = {Cy5} | Blue = {mCherry}",
-# #     linewidth=3, 
-# #     contrast=True, 
-# #     framesize=(10, 5)
-# # )
+        # Define output filename
+        mRNA_mRNA_output = os.path.join(output_directory, f"mRNA_coloc_mRNA_{image_name}.png")
+
+        # Plot and save the colocalization results
+        plot.plot_detection(
+            image_mCherry,
+            spots=[colocalized_spots_ch0, colocalized_spots_ch1], 
+            radius=2, 
+            path_output=mRNA_mRNA_output,
+            color=["red", "purple"],
+            title=f"Red = {Cy5} | Purple = {mCherry}",
+            linewidth=3, contrast=True, framesize=(10, 5)
+        )
+
+        # Return colocalized spots and distances for further analysis
+        return colocalized_spots_ch0, colocalized_spots_ch1, distances[valid_matches]
+
+    # Call the function
+    colocalized_spots_ch0, colocalized_spots_ch1, distances = mRNA_coloc(
+        ch0_array, ch1_array, voxel_size, image_Cy5, image_mCherry, image_name, Cy5, mCherry, plot
+    )
 
 
 # #### 3.5 Log calculation of mRNA vs protein
 
-# In[26]:
+# In[ ]:
 
 
-# # Heatmap of protein levels with intensity calculations restricted to the mask
+# Heatmap of protein levels with intensity calculations restricted to the mask
 
-# fitc_projection = np.max(image_colors[2, :, :, :], axis=0)
+fitc_projection = image_FITC
 
-# def protein_expression(intensity_image, mask, output_filename, title='Protein Expression Heatmap', grid_width=80, grid_height=80):
-#     # Calculate the width and height of each grid cell
-#     img_width, img_height = intensity_image.shape[1], intensity_image.shape[0]
-#     cell_width = img_width / grid_width
-#     cell_height = img_height / grid_height
+def protein_expression(intensity_image, mask, output_filename, title='Protein Expression Heatmap', grid_width=80, grid_height=80, threshold=0.7):
+    """
+    Generates a protein expression heatmap, restricting intensity calculations to the mask and applying a threshold 
+    to remove background noise.
 
-#     # Create an empty grid to store the mean intensities
-#     grid = np.zeros((grid_height, grid_width), dtype=float)
-
-#     # Populate the grid with mean intensities within the mask
-#     for i in range(grid_height):
-#         for j in range(grid_width):
-#             # Determine the boundaries of the current grid cell
-#             x_start = int(j * cell_width)
-#             x_end = int((j + 1) * cell_width)
-#             y_start = int(i * cell_height)
-#             y_end = int((i + 1) * cell_height)
-
-#             # Extract the subregion of the intensity image and the mask
-#             region_intensity = intensity_image[y_start:y_end, x_start:x_end]
-#             region_mask = mask[y_start:y_end, x_start:x_end]
-
-#             # Calculate the mean intensity only inside the mask
-#             if np.any(region_mask):
-#                 grid[i, j] = np.mean(region_intensity[region_mask > 0])
-#             else:
-#                 grid[i, j] = np.nan  # Set to NaN if no mask is present in the region
-
-#     # Create a colormap that handles NaN values by setting them to black
-#     cmap = plt.cm.get_cmap('CMRmap').copy()
-#     cmap.set_bad(color='black')  # Set NaN values to black
-
-#     # Create a heatmap, handling NaN values by setting them to black
-#     masked_grid = np.ma.masked_invalid(grid)  # Mask NaN values
-#     plt.imshow(masked_grid, cmap=cmap, interpolation='nearest', vmin=np.nanmin(grid), vmax=np.nanmax(grid))
-#     plt.title(title)
-#     plt.axis('off')
-
-#     # Create a vertical color bar
-#     cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
-#     cbar.ax.text(1, 1.05, 'Higher\nExpression', transform=cbar.ax.transAxes, ha='center')
-#     cbar.ax.text(1, -0.19, 'Lower\nExpression', transform=cbar.ax.transAxes, ha='center')
-#     cbar.set_ticks([])
-
-#     # Save the heatmap
-#     plt.savefig(output_filename)
-#     plt.show()
-
-# # Example usage with mask and intensity projection
-# if fitc_projection is not None and masks_cytosol is not None:
-#     protein_expression(fitc_projection, masks_cytosol, os.path.join(output_directory, 'FITC_protein_expression_heatmap.png'))
-
-
-# In[27]:
-
-
-# # Define a custom colormap from black to white to green, ensuring NaN values appear as black
-# cmap = 'PRGn'
-# cmap_with_black = plt.cm.get_cmap(cmap).copy()
-# cmap_with_black.set_bad(color='black')  # Set NaN values to black
-
-# def log_contrast(mcherry_heatmap, fitc_projection, masks_cytosol, cmap=cmap_with_black):
-#     # Resize the cytosol mask to match the mcherry_heatmap dimensions
-#     masks_cytosol_resized = resize(masks_cytosol, mcherry_heatmap.shape, anti_aliasing=True)
+    Parameters:
+    - intensity_image: 2D numpy array of protein intensity values
+    - mask: 2D numpy array of the mask where protein expression is considered
+    - output_filename: Path to save the resulting heatmap image
+    - title: Title of the heatmap
+    - grid_width: Number of grid columns for analysis
+    - grid_height: Number of grid rows for analysis
+    - threshold: Intensity threshold (0 to 1) to remove background noise
+    """
     
-#     # Apply the resized cytosol mask to both mcherry_heatmap and fitc_projection
-#     mcherry_heatmap_masked = mcherry_heatmap * masks_cytosol_resized
-#     fitc_projection_masked = fitc_projection * masks_cytosol_resized
+    # Apply the threshold to remove background noise (similar to your nuclear_segmentation)
+    max_value_image = np.max(intensity_image)
+    intensity_image_thresholded = intensity_image.copy()
+    intensity_image_thresholded[intensity_image_thresholded < max_value_image * threshold] = 0
 
-#     # Initialize log contrast map with NaN values
-#     log_contrast_map = np.full(mcherry_heatmap.shape, np.nan)
+    # Calculate the width and height of each grid cell
+    img_width, img_height = intensity_image.shape[1], intensity_image.shape[0]
+    cell_width = img_width / grid_width
+    cell_height = img_height / grid_height
 
-#     # Calculate the log contrast only inside the mask (where the mask is > 0)
-#     mask_inside = masks_cytosol_resized > 0
+    # Create an empty grid to store the mean intensities
+    grid = np.zeros((grid_height, grid_width), dtype=float)
 
-#     # Calculate log contrast, avoiding log(0) issues, only inside the mask
-#     if np.any(mask_inside):
-#         log_contrast_map[mask_inside] = np.log1p(mcherry_heatmap_masked[mask_inside]) - np.log1p(fitc_projection_masked[mask_inside])
+    # Populate the grid with mean intensities within the mask
+    for i in range(grid_height):
+        for j in range(grid_width):
+            # Determine the boundaries of the current grid cell
+            x_start = int(j * cell_width)
+            x_end = int((j + 1) * cell_width)
+            y_start = int(i * cell_height)
+            y_end = int((i + 1) * cell_height)
 
-#     # Mask NaN values in the log contrast map to ensure they appear as black
-#     masked_contrast_map = np.ma.masked_invalid(log_contrast_map)
+            # Extract the subregion of the intensity image and the mask
+            region_intensity = intensity_image_thresholded[y_start:y_end, x_start:x_end]
+            region_mask = mask[y_start:y_end, x_start:x_end]
+
+            # Calculate the mean intensity only inside the mask
+            if np.any(region_mask):
+                grid[i, j] = np.mean(region_intensity[region_mask > 0])
+            else:
+                grid[i, j] = np.nan  # Set to NaN if no mask is present in the region
+
+    # Create a colormap that handles NaN values by setting them to black
+    cmap = plt.cm.get_cmap('CMRmap').copy()
+    cmap.set_bad(color='black')  # Set NaN values to black
+
+    # Create a heatmap, handling NaN values by setting them to black
+    masked_grid = np.ma.masked_invalid(grid)  # Mask NaN values
+    plt.imshow(masked_grid, cmap=cmap, interpolation='nearest', vmin=np.nanmin(grid), vmax=np.nanmax(grid))
+    plt.title(title)
+    plt.axis('off')
+
+    # Create a vertical color bar
+    cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
+    cbar.ax.text(1, 1.05, 'Higher\nExpression', transform=cbar.ax.transAxes, ha='center')
+    cbar.ax.text(1, -0.19, 'Lower\nExpression', transform=cbar.ax.transAxes, ha='center')
+    cbar.set_ticks([])
+
+    # Save the heatmap
+    plt.savefig(output_filename)
+    plt.show()
+
+# Example usage with mask and intensity projection, including threshold for background noise removal
+if fitc_projection is not None and masks_cytosol is not None:
+    protein_expression(fitc_projection, masks_cytosol, os.path.join(output_directory, 'FITC_protein_expression_heatmap.png'), threshold=0.6)
+
+
+# In[ ]:
+
+
+from skimage import measure, morphology
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.transform import resize
+
+def apply_threshold(image, threshold):
+    """
+    Apply thresholding to the input image, setting values below threshold to 0.
+    """
+    max_value_image = np.max(image)
+    binary_image = np.zeros_like(image)
+    binary_image[image >= max_value_image * threshold] = 1
+    return binary_image
+
+def log_contrast_with_white_background(mcherry_heatmap, fitc_projection, masks_cytosol, threshold=0.7, cmap='PRGn', grid_width=80, grid_height=80):
+    # Resize the cytosol mask to match the mcherry_heatmap dimensions
+    masks_cytosol_resized = resize(masks_cytosol, mcherry_heatmap.shape, anti_aliasing=True)
     
-#     # Plot the log contrast map, handling NaN values by setting them to black
-#     plt.imshow(masked_contrast_map, cmap=cmap, interpolation='nearest', vmin=np.nanmin(log_contrast_map), vmax=np.nanmax(log_contrast_map))
-#     plt.colorbar(label='Log Contrast')
-#     plt.title('Log Contrast between mCherry and FITC')
-#     plt.show()
+    # Apply thresholding to mCherry and FITC projections to remove background noise
+    mcherry_thresholded = mcherry_heatmap * apply_threshold(mcherry_heatmap, threshold)
+    fitc_thresholded = fitc_projection * apply_threshold(fitc_projection, threshold)
     
-#     return log_contrast_map
+    # Apply the resized cytosol mask to both mcherry_heatmap and fitc_projection
+    mcherry_heatmap_masked = mcherry_thresholded * masks_cytosol_resized
+    fitc_projection_masked = fitc_thresholded * masks_cytosol_resized
 
-# # Example usage
-# fitc_resized = resize(fitc_projection, mcherry_heatmap.shape, anti_aliasing=True)
-# log_contrast_map = log_contrast(mcherry_heatmap, fitc_resized, masks_cytosol)
+    # Initialize log contrast map with NaN values
+    log_contrast_map = np.full(mcherry_heatmap.shape, np.nan)
 
+    # Calculate the log contrast only inside the mask (where the mask is > 0)
+    mask_inside = masks_cytosol_resized > 0
 
-# In[28]:
+    # Calculate log contrast, avoiding log(0) issues, only inside the mask
+    if np.any(mask_inside):
+        log_contrast_map[mask_inside] = np.log1p(mcherry_heatmap_masked[mask_inside]) - np.log1p(fitc_projection_masked[mask_inside])
 
+    # Mask NaN values in the log contrast map to ensure they appear as white
+    masked_contrast_map = np.ma.masked_invalid(log_contrast_map)
+    
+    # Create a custom colormap to display NaN values as white
+    cmap_with_white = plt.cm.get_cmap(cmap).copy()
+    cmap_with_white.set_bad(color='white')  # Set NaN values to white
+    
+    # Plot the log contrast map with increased grid resolution (smaller grid cells)
+    plt.imshow(masked_contrast_map, cmap=cmap_with_white, interpolation='nearest', 
+               vmin=np.nanmin(log_contrast_map), vmax=np.nanmax(log_contrast_map))
+    plt.colorbar(label='Log Contrast')
+    plt.title('Log Contrast between mCherry and FITC')
+    plt.show()
+    
+    return log_contrast_map
 
-# import numpy as np
-# import os
-# import matplotlib.pyplot as plt
-# from skimage.transform import resize
-
-# class ImageProcessor:
-#     def process_image(self, image, min_percentile=0.1, max_percentile=99):
-#         """
-#         Remove extreme values based on percentile filtering and normalize the image.
-        
-#         Parameters:
-#         - image: Input image array.
-#         - min_percentile: Minimum percentile to exclude low values.
-#         - max_percentile: Maximum percentile to exclude high values.
-        
-#         Returns:
-#         - Normalized image after filtering extreme values.
-#         """
-#         # Calculate the minimum and maximum values based on percentiles
-#         lower_bound = np.percentile(image, min_percentile)
-#         upper_bound = np.percentile(image, max_percentile)
-        
-#         # Apply filtering: Set values below lower_bound to lower_bound and above upper_bound to upper_bound
-#         filtered_image = np.clip(image, lower_bound, upper_bound)
-        
-#         # Normalize the filtered image to the range [0, 255]
-#         processed_image = (filtered_image - filtered_image.min()) / (filtered_image.max() - filtered_image.min()) * 255
-        
-#         return processed_image
-
-#     def protein_expression(self, intensity_image, mask, output_filename, title='Protein Expression Heatmap', grid_width=80, grid_height=80):
-#         # Normalize the intensity image
-#         intensity_image = self.process_image(intensity_image)
-
-#         # Calculate the width and height of each grid cell
-#         img_width, img_height = intensity_image.shape[1], intensity_image.shape[0]
-#         cell_width = img_width / grid_width
-#         cell_height = img_height / grid_height
-
-#         # Create an empty grid to store the mean intensities
-#         grid = np.zeros((grid_height, grid_width), dtype=float)
-
-#         # Populate the grid with mean intensities within the mask
-#         for i in range(grid_height):
-#             for j in range(grid_width):
-#                 # Determine the boundaries of the current grid cell
-#                 x_start = int(j * cell_width)
-#                 x_end = int((j + 1) * cell_width)
-#                 y_start = int(i * cell_height)
-#                 y_end = int((i + 1) * cell_height)
-
-#                 # Extract the subregion of the intensity image and the mask
-#                 region_intensity = intensity_image[y_start:y_end, x_start:x_end]
-#                 region_mask = mask[y_start:y_end, x_start:x_end]
-
-#                 # Calculate the mean intensity only inside the mask
-#                 if np.any(region_mask):
-#                     grid[i, j] = np.mean(region_intensity[region_mask > 0])
-#                 else:
-#                     grid[i, j] = np.nan  # Set to NaN if no mask is present in the region
-
-#         # Create a colormap that handles NaN values by setting them to black
-#         cmap = plt.cm.get_cmap('CMRmap').copy()
-#         cmap.set_bad(color='black')  # Set NaN values to black
-
-#         # Create a heatmap, handling NaN values by setting them to black
-#         masked_grid = np.ma.masked_invalid(grid)  # Mask NaN values
-#         plt.imshow(masked_grid, cmap=cmap, interpolation='nearest', vmin=np.nanmin(grid), vmax=np.nanmax(grid))
-#         plt.title(title)
-#         plt.axis('off')
-
-#         # Create a vertical color bar
-#         cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
-#         cbar.ax.text(1, 1.05, 'Higher\nExpression', transform=cbar.ax.transAxes, ha='center')
-#         cbar.ax.text(1, -0.19, 'Lower\nExpression', transform=cbar.ax.transAxes, ha='center')
-#         cbar.set_ticks([])
-
-#         # Save the heatmap
-#         plt.savefig(output_filename)
-#         plt.show()
-
-#     def log_contrast(self, mcherry_heatmap, fitc_projection, masks_cytosol, cmap='PRGn'):
-#         # Resize the cytosol mask to match the mcherry_heatmap dimensions
-#         masks_cytosol_resized = resize(masks_cytosol, mcherry_heatmap.shape, anti_aliasing=True)
-
-#         # Apply the resized cytosol mask to both mcherry_heatmap and fitc_projection
-#         mcherry_heatmap_masked = mcherry_heatmap * masks_cytosol_resized
-#         fitc_projection_masked = fitc_projection * masks_cytosol_resized
-
-#         # Initialize log contrast map with NaN values
-#         log_contrast_map = np.full(mcherry_heatmap.shape, np.nan)
-
-#         # Calculate the log contrast only inside the mask (where the mask is > 0)
-#         mask_inside = masks_cytosol_resized > 0
-
-#         # Calculate log contrast, avoiding log(0) issues, only inside the mask
-#         if np.any(mask_inside):
-#             log_contrast_map[mask_inside] = np.log1p(mcherry_heatmap_masked[mask_inside]) - np.log1p(fitc_projection_masked[mask_inside])
-
-#         # Mask NaN values in the log contrast map to ensure they appear as black
-#         masked_contrast_map = np.ma.masked_invalid(log_contrast_map)
-
-#         # Plot the log contrast map, handling NaN values by setting them to black
-#         plt.imshow(masked_contrast_map, cmap=cmap, interpolation='nearest', vmin=np.nanmin(log_contrast_map), vmax=np.nanmax(log_contrast_map))
-#         plt.colorbar(label='Log Contrast')
-#         plt.title('Log Contrast between mCherry and FITC')
-#         plt.show()
-
-#         return log_contrast_map
-
-# # Example usage
-# image_processor = ImageProcessor()
-
-# # Assuming fitc_projection and masks_cytosol are defined
-# if fitc_projection is not None and masks_cytosol is not None:
-#     # Compute protein expression heatmap
-#     image_processor.protein_expression(fitc_projection, masks_cytosol, os.path.join(output_directory, 'FITC_protein_expression_heatmap.png'))
-
-#     # Compute log contrast map
-#     fitc_resized = resize(fitc_projection, mcherry_heatmap.shape, anti_aliasing=True)
-#     log_contrast_map = image_processor.log_contrast(mcherry_heatmap, fitc_resized, masks_cytosol)
-
-
-# In[29]:
-
-
-# import numpy as np
-# import os
-# import matplotlib.pyplot as plt
-# from skimage.transform import resize
-
-# class ImageProcessor:
-#     def process_image(self, image, min_percentile=0.1, max_percentile=99):
-#         """
-#         Remove extreme values based on percentile filtering and normalize the image.
-        
-#         Parameters:
-#         - image: Input image array.
-#         - min_percentile: Minimum percentile to exclude low values.
-#         - max_percentile: Maximum percentile to exclude high values.
-        
-#         Returns:
-#         - Normalized image after filtering extreme values.
-#         """
-#         # Calculate the minimum and maximum values based on percentiles
-#         lower_bound = np.percentile(image, min_percentile)
-#         upper_bound = np.percentile(image, max_percentile)
-        
-#         # Apply filtering: Set values below lower_bound to lower_bound and above upper_bound to upper_bound
-#         filtered_image = np.clip(image, lower_bound, upper_bound)
-        
-#         # Normalize the filtered image to the range [0, 255]
-#         processed_image = (filtered_image - filtered_image.min()) / (filtered_image.max() - filtered_image.min()) * 255
-        
-#         return processed_image
-
-#     def protein_expression(self, intensity_image, mask, output_filename, title='Protein Expression Heatmap', grid_width=80, grid_height=80):
-#         # Normalize the intensity image
-#         intensity_image = self.process_image(intensity_image)
-
-#         # Calculate the width and height of each grid cell
-#         img_width, img_height = intensity_image.shape[1], intensity_image.shape[0]
-#         cell_width = img_width / grid_width
-#         cell_height = img_height / grid_height
-
-#         # Create an empty grid to store the mean intensities
-#         grid = np.zeros((grid_height, grid_width), dtype=float)
-
-#         # Populate the grid with mean intensities within the mask
-#         for i in range(grid_height):
-#             for j in range(grid_width):
-#                 # Determine the boundaries of the current grid cell
-#                 x_start = int(j * cell_width)
-#                 x_end = int((j + 1) * cell_width)
-#                 y_start = int(i * cell_height)
-#                 y_end = int((i + 1) * cell_height)
-
-#                 # Extract the subregion of the intensity image and the mask
-#                 region_intensity = intensity_image[y_start:y_end, x_start:x_end]
-#                 region_mask = mask[y_start:y_end, x_start:x_end]
-
-#                 # Calculate the mean intensity only inside the mask
-#                 if np.any(region_mask):
-#                     grid[i, j] = np.mean(region_intensity[region_mask > 0])
-#                 else:
-#                     grid[i, j] = np.nan  # Set to NaN if no mask is present in the region
-
-#         # Create a colormap that handles NaN values by setting them to black
-#         cmap = plt.cm.get_cmap('CMRmap').copy()
-#         cmap.set_bad(color='black')  # Set NaN values to black
-
-#         # Create a heatmap, handling NaN values by setting them to black
-#         masked_grid = np.ma.masked_invalid(grid)  # Mask NaN values
-#         plt.imshow(masked_grid, cmap=cmap, interpolation='nearest', vmin=np.nanmin(grid), vmax=np.nanmax(grid))
-#         plt.title(title)
-#         plt.axis('off')
-
-#         # Create a vertical color bar
-#         cbar = plt.colorbar(orientation='vertical', shrink=0.5)  # Adjust the shrink parameter to make it smaller
-#         cbar.ax.text(1, 1.05, 'Higher\nExpression', transform=cbar.ax.transAxes, ha='center')
-#         cbar.ax.text(1, -0.19, 'Lower\nExpression', transform=cbar.ax.transAxes, ha='center')
-#         cbar.set_ticks([])
-
-#         # Save the heatmap
-#         plt.savefig(output_filename)
-#         plt.show()
-
-#     def log_contrast(self, mcherry_heatmap, fitc_projection, masks_cytosol, cmap='PRGn'):
-#         # Resize the cytosol mask to match the mcherry_heatmap dimensions
-#         masks_cytosol_resized = resize(masks_cytosol, mcherry_heatmap.shape, anti_aliasing=True)
-
-#         # Apply the resized cytosol mask to both mcherry_heatmap and fitc_projection
-#         mcherry_heatmap_masked = mcherry_heatmap * masks_cytosol_resized
-#         fitc_projection_masked = fitc_projection * masks_cytosol_resized
-
-#         # Initialize log contrast map with NaN values
-#         log_contrast_map = np.full(mcherry_heatmap.shape, np.nan)
-
-#         # Calculate the log contrast only inside the mask (where the mask is > 0)
-#         mask_inside = masks_cytosol_resized > 0
-
-#         # Calculate log contrast, avoiding log(0) issues, only inside the mask
-#         if np.any(mask_inside):
-#             log_contrast_map[mask_inside] = np.log1p(mcherry_heatmap_masked[mask_inside]) - np.log1p(fitc_projection_masked[mask_inside])
-
-#         # Mask NaN values in the log contrast map to ensure they appear as black
-#         masked_contrast_map = np.ma.masked_invalid(log_contrast_map)
-
-#         # Plot the log contrast map, handling NaN values by setting them to black
-#         plt.imshow(masked_contrast_map, cmap=cmap, interpolation='nearest', vmin=np.nanmin(log_contrast_map), vmax=np.nanmax(log_contrast_map))
-#         plt.colorbar(label='Log Contrast')
-#         plt.title('Log Contrast between mCherry and FITC')
-#         plt.show()
-
-#         return log_contrast_map
-
-# # Example usage
-# image_processor = ImageProcessor()
-
-# # Assuming fitc_projection and masks_cytosol are defined
-# if fitc_projection is not None and masks_cytosol is not None:
-#     # Compute protein expression heatmap
-#     image_processor.protein_expression(fitc_projection, masks_cytosol, os.path.join(output_directory, 'FITC_protein_expression_heatmap.png'))
-
-#     # Compute log contrast map
-#     fitc_resized = resize(fitc_projection, mcherry_heatmap.shape, anti_aliasing=True)
-#     log_contrast_map = image_processor.log_contrast(mcherry_heatmap, fitc_resized, masks_cytosol)
+# Example usage with higher grid resolution for better color granularity
+fitc_resized = resize(fitc_projection, mcherry_heatmap.shape, anti_aliasing=True)
+log_contrast_map = log_contrast_with_white_background(mcherry_heatmap, fitc_resized, masks_cytosol, threshold=0.3, grid_width=40, grid_height=40)
 
 
 # ### 4. Data export and display
 
-# In[30]:
+# In[ ]:
 
 
 #pdf report
@@ -1804,11 +1826,23 @@ report_name = f'Report-{date.today()}'
 create_image_report(output_directory, output_pdf_path, report_name, crop_top=60)
 
 
-# In[31]:
+# In[ ]:
 
 
 # # Path to your audio file
 # audio_file_path = '/pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/song.mp3'
 # # Load and play the audio file
 # Audio(filename=audio_file_path, autoplay=True)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 
