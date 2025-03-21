@@ -9,10 +9,14 @@ Collaborators: Luis de Lira Aguilera PhD, Karissa Coleman BS, Bryan Musky, Erin 
 # Description
 Software to analyze smFISH images of C. elegans embryos in python. Requires non-deconvolved microscope images in organized subdirectories. Cell segmentation is performed using Cellpose and spot detection using FISHquant. Output is a csv file with mRNA counts per embryo and a report with images of the spot detection and segmentaion masks.
 
+![Alt text](04_example-output/N2-erm-1_set-3/12/colors_240628_N2_erm-1_set-3_12.png)
+
+
 
 # Code overview
 ## Cell segmentaion
 Uses Cellpose
+![Alt text](04_example-output/N2-erm-1_set-3/12/segmentation_240628_N2_erm-1_set-3_12.png)
 
 ## Spot detection
 Save files as png in subdirectories
