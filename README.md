@@ -19,10 +19,45 @@ Software to analyze smFISH images of C. elegans embryos in python. Requires non-
 ## Cell segmentaion
 Uses Cellpose
 ![Alt text](04_example-output/N2-erm-1_set-3/12/segmentation_240628_N2_erm-1_set-3_12.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/240628_N2_erm-1_set-3_12_cytosol_donut.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/240628_N2_erm-1_set-3_12_nuclei_donut.png)
+
+
 
 ## Spot detection
 Save files as png in subdirectories
 Uses Python
+![Alt text](04_example-output/N2-erm-1_set-3/12/erm-1_mRNA_detection_240628_N2_erm-1_set-3_12.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/erm-1_mRNA_threshold_240628_N2_erm-1_set-3_12.png)
+
+![Alt text](04_example-output/N2-erm-1_set-3/12/set-3_mRNA_detection_240628_N2_erm-1_set-3_12.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/set-3_mRNA_threshold_240628_N2_erm-1_set-3_12.png)
+
+
+
+## Calculate colocalization with C. elegans feautures
+mRNA-membrane colocalization
+
+![Alt text](04_example-output/N2-erm-1_set-3/12/erm-1_mRNA_in_membranes_240628_N2_erm-1_set-3_12.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/erm-1_mRNA_out_membranes_240628_N2_erm-1_set-3_12.png)
+![Alt text](04_example-output/N2-erm-1_set-3/12/erm-1_mRNA_combined_membranes_output_240628_N2_erm-1_set-3_12.png)
+
+mRNA-p granules colocalization
+
+![Alt text]( )
+![Alt text]( )
+
+
+mRNA-nuclei colocalization
+
+![Alt text]( )
+![Alt text]( )
+
+
+mRNA-mRNA colocalization
+
+![Alt text]( )
+![Alt text]( )
 
 ## Data analysis and visualization
 
