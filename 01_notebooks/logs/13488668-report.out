@@ -1,0 +1,9 @@
+Invalid or missing directory: 
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/curc/sw/anaconda3/2023.09/lib/python3.11/site-packages/pandas/core/reshape/concat.py", line 372, in concat
+    op = _Concatenator(
+         ^^^^^^^^^^^^^^
+  File "/curc/sw/anaconda3/2023.09/lib/python3.11/site-packages/pandas/core/reshape/concat.py", line 429, in __init__
+    raise ValueError("No objects to concatenate")
+ValueError: No objects to concatenate

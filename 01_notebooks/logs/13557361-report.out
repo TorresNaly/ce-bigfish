@@ -1,0 +1,60 @@
+Processing folder: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/UNC-116_RNAi/240106_LP306_UNC-116_RNAi-rep2/input/10
+Output directory: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/UNC-116_RNAi/240106_LP306_UNC-116_RNAi-rep2/output/10
+Image types: dv=True, nd2=False, tiff=False
+Channels: Cy5=set-3_mRNA, mCherry=erm-1_mRNA, FITC=PH-GFP, DAPI=DAPI, Brightfield=brightfield
+Microscope info: Wavelengths (Cy5=670 nm, mCherry=610 nm), NA=1.42, Refractive Index=1.515
+PSF parameters: spot_radius_ch0=(1409, 340, 340), spot_radius_ch1=(1283, 310, 310), voxel_size=(1448, 450, 450)
+Feature selection: PSF=True, Segmentation=True, Spot Detection=True
+Heatmaps: mRNA=True, Protein=True, RNA Density=False
+Masks: Donut=True, P-Granule=True
+Colocalization: Membrane=True, Nuclei=True, P-Granule=True, mRNA-mRNA=True
+Lateral (xy) PSF for Cy5 channel: 287.8169014084507 nm
+Axial (z) PSF for Cy5 channel with 60x oil objective: 1006.7942868478476 nm
+Lateral (xy) PSF: 262.0422535211267 nm
+Axial (z) PSF with 60x oil objective: 916.6336044435628 nm
+Image ID: 240106_LP306_UNC-116_RNAi_10 
+
+Image colors 
+240106_LP306_UNC-116_RNAi_10_R3D.dv: (4, 62, 1024, 1024) 
+
+Brightfield 
+240106_LP306_UNC-116_RNAi_10_R3D_REF.dv: (1024, 1024)
+Image ID: 240106_LP306_UNC-116_RNAi_10 
+
+set-3_mRNA detection
+ threshold: 93.0
+ spots: 959
+ clusters: 0
+Traceback (most recent call last):
+  File "/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py", line 794, in <module>
+    spots_post_clustering_ch0, clusters_ch0,list_spots_in_each_cell_ch0,list_clusters_in_each_cell_ch0 = spot_detection(rna_ch0,voxel_size,spot_radius_ch0,masks_cytosol)
+  File "/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py", line 735, in spot_detection
+    plot.plot_elbow(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/bigfish/plot/plot_quality.py", line 222, in plot_elbow
+    save_plot(path_output, ext)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/bigfish/plot/utils.py", line 36, in save_plot
+    plt.savefig(path_output, format=ext)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/pyplot.py", line 1023, in savefig
+    res = fig.savefig(*args, **kwargs)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/figure.py", line 3378, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2366, in print_figure
+    result = print_method(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2232, in <lambda>
+    print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/backends/backend_agg.py", line 509, in print_png
+    self._print_pil(filename_or_obj, "png", pil_kwargs, metadata)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/backends/backend_agg.py", line 458, in _print_pil
+    mpl.image.imsave(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/matplotlib/image.py", line 1689, in imsave
+    image.save(fname, **pil_kwargs)
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/PIL/Image.py", line 2410, in save
+    fp = builtins.open(filename, "w+b")
+FileNotFoundError: [Errno 2] No such file or directory: '/pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/UNC-116_RNAi/240106_LP306_UNC-116_RNAi-rep2/output/10/set-3_mRNA_threshold_240106_LP306_UNC-116_RNAi_10.png'
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/pandas/core/reshape/concat.py", line 372, in concat
+    op = _Concatenator(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/pandas/core/reshape/concat.py", line 429, in __init__
+    raise ValueError("No objects to concatenate")
+ValueError: No objects to concatenate

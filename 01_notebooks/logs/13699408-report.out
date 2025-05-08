@@ -1,0 +1,58 @@
+/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py:1566: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig, ax = plt.subplots()
+Processing folder: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/DHC-1_RNAi/220922_LP306_dhc1_rnai_rep3/input/06
+Output directory: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/DHC-1_RNAi/220922_LP306_dhc1_rnai_rep3/output/06
+Image types: dv=True, nd2=False, tiff=False
+Channels: Cy5=set-3_mRNA, mCherry=erm-1_mRNA, FITC=PH-GFP, DAPI=DAPI, Brightfield=brightfield
+Microscope info: Wavelengths (Cy5=670 nm, mCherry=610 nm), NA=1.42, Refractive Index=1.515
+PSF parameters: spot_radius_ch0=(1409, 340, 340), spot_radius_ch1=(1283, 310, 310), voxel_size=(1448, 450, 450)
+Feature selection: PSF=True, Segmentation=True, Spot Detection=True
+Heatmaps: mRNA=True, Protein=True, RNA Density=True
+Masks: Donut=True, P-Granule=True
+Colocalization: Membrane=True, Nuclei=True, P-Granule=True, mRNA-mRNA=True
+Lateral (xy) PSF for Cy5 channel: 287.8169014084507 nm
+Axial (z) PSF for Cy5 channel with 60x oil objective: 1006.7942868478476 nm
+Lateral (xy) PSF: 262.0422535211267 nm
+Axial (z) PSF with 60x oil objective: 916.6336044435628 nm
+Image ID: 220922_LP306_dhc-1_rnai_rep3_06 
+
+Image colors 
+220922_LP306_dhc-1_rnai_rep3_06_R3D.dv: (4, 59, 1024, 1024) 
+
+Brightfield 
+220922_LP306_dhc-1_rnai_rep3_06_R3D_REF.dv: (1024, 1024)
+Image ID: 220922_LP306_dhc-1_rnai_rep3_06 
+
+set-3_mRNA detection
+ threshold: 52.0
+ spots: 625
+ clusters: 0
+Image ID: 220922_LP306_dhc-1_rnai_rep3_06 
+
+erm-1_mRNA detection
+ threshold: 83.0
+ spots: 2875
+ clusters: 0
+
+
+set-3_mRNA spots detected (on membranes):
+  Shape: (111, 3)
+  Dtype: int64
+
+set-3_mRNA spots detected (in cytosol):
+  Shape: (514, 3)
+  Dtype: int64
+erm-1_mRNA spots detected (on membranes):
+  Shape: (176, 3)
+  Dtype: int64
+
+erm-1_mRNA spots detected (in cytosol):
+  Shape: (2699, 3)
+  Dtype: int64
+Traceback (most recent call last):
+  File "/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py", line 1674, in <module>
+    analyze_rna_density(image=image, masks_cytosol=masks_cytosol, colormap=colormap, mRNA_name=mRNA_name, image_name=image_name, output_directory=output_directory)
+  File "/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py", line 1656, in analyze_rna_density
+    f'{mRNA_name} Normalized density': normalized_density
+NameError: name 'normalized_density' is not defined
+Combined CSV saved at /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/DHC-1_RNAi/220922_LP306_dhc1_rnai_rep3/output/combined_quantification.csv

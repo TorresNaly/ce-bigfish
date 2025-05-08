@@ -7,11 +7,10 @@
 #SBATCH --output="logs/%j-report.out"  # Initially save in a default logs directory
 
 # Set the base directory and initialize paths
-local_download_directory="/pl/active/onishimura_lab/PROJECTS/naly/bigfish/02_DG_quantification/WDMP91_smFISH/250204_WDMP91/2-cell/Dark"
+local_download_directory="$1"
 input_directory="${local_download_directory}/input"
 subdirectories=("$input_directory"/*)
-#python_script_path="/projects/naly@colostate.edu/bigfish/ce-bigfish/01_Ce-bigIFSH_single-embryo-4.py"
-python_script_path="/pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_Ce-bigIFSH_single-embryo-6.py"
+python_script_path="/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py"
 
 # Ensure SLURM_ARRAY_TASK_ID is within bounds of subdirectories array
 export FOLDER_NAME="${subdirectories[${SLURM_ARRAY_TASK_ID}]}"
@@ -24,8 +23,8 @@ export TIFF_IMAGES="False"
 
 # Set channel names
 export Cy5="set-3_mRNA"
-export mCherry="lin-41_mRNA"
-export FITC="nothing"
+export mCherry="erm-1_mRNA"
+export FITC="PH-GFP"
 export DAPI="DAPI"
 export brightfield="brightfield"
 
@@ -48,7 +47,7 @@ export SPOT_DETECTION="True"
 # Heatmaps
 export RUN_mRNA_HEATMAPS="True"
 export RUN_PROTEIN_HEATMAPS="True"
-export ANALYZE_RNA_DENSITY="False"
+export ANALYZE_RNA_DENSITY="True"
 
 # Mask generation
 export GENERATE_DONUT_MASK="True"

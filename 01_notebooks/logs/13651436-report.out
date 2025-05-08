@@ -1,0 +1,8 @@
+Skipping folder: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/04_drug-treatments/231112_wNT002_150uM_Noco/input/06_results as it does not contain the required files .
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/pandas/core/reshape/concat.py", line 372, in concat
+    op = _Concatenator(
+  File "/projects/.colostate.edu/naly/software/anaconda/envs/bigfish_env/lib/python3.8/site-packages/pandas/core/reshape/concat.py", line 429, in __init__
+    raise ValueError("No objects to concatenate")
+ValueError: No objects to concatenate

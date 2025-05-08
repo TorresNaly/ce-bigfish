@@ -1,0 +1,26 @@
+Processing folder: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/L4440_RNAi/240131_L4440_RNAi-rep3/input/01
+Output directory: /pl/active/onishimura_lab/PROJECTS/naly/bigfish/01_RNAi_quantification/LP306_membrane/L4440_RNAi/240131_L4440_RNAi-rep3/output/01
+Image types: dv=True, nd2=False, tiff=False
+Channels: Cy5=set-3_mRNA, mCherry=erm-1_mRNA, FITC=PH-GFP, DAPI=DAPI, Brightfield=brightfield
+Microscope info: Wavelengths (Cy5=670 nm, mCherry=610 nm), NA=1.42, Refractive Index=1.515
+PSF parameters: spot_radius_ch0=(1409, 340, 340), spot_radius_ch1=(1283, 310, 310), voxel_size=(1448, 450, 450)
+Feature selection: PSF=True, Segmentation=True, Spot Detection=True
+Heatmaps: mRNA=True, Protein=True, RNA Density=False
+Masks: Donut=True, P-Granule=True
+Colocalization: Membrane=True, Nuclei=True, P-Granule=True, mRNA-mRNA=True
+Lateral (xy) PSF for Cy5 channel: 287.8169014084507 nm
+Axial (z) PSF for Cy5 channel with 60x oil objective: 1006.7942868478476 nm
+Lateral (xy) PSF: 262.0422535211267 nm
+Axial (z) PSF with 60x oil objective: 916.6336044435628 nm
+Traceback (most recent call last):
+  File "/projects/naly@colostate.edu/bigfish/ce-bigfish/01_notebooks/01_Ce-bigIFSH.py", line 167, in <module>
+    import bigfish
+ModuleNotFoundError: No module named 'bigfish'
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/curc/sw/anaconda3/2023.09/lib/python3.11/site-packages/pandas/core/reshape/concat.py", line 372, in concat
+    op = _Concatenator(
+         ^^^^^^^^^^^^^^
+  File "/curc/sw/anaconda3/2023.09/lib/python3.11/site-packages/pandas/core/reshape/concat.py", line 429, in __init__
+    raise ValueError("No objects to concatenate")
+ValueError: No objects to concatenate
